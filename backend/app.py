@@ -106,5 +106,40 @@ def corrigir_redacao():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": f"Falha na API da OpenAI: {str(e)}"}), 500
 
+@app.route('/api/desempenho', methods=['GET'])
+def obter_desempenho():
+    """Rota que puxa o histórico de estudos do aluno para criar os gráficos"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Puxa o histórico de redações
+        cur.execute("SELECT tema, nota_final, data_envio FROM redacoes WHERE usuario_id = 1 ORDER BY data_envio DESC LIMIT 5;")
+        redacoes_banco = cur.fetchall()
+        
+        # 2. Puxa a média dos simulados (Para o MVP, criamos uma média simples)
+        cur.execute("SELECT AVG(nota) FROM simulados_historico WHERE usuario_id = 1;")
+        media_simulado = cur.fetchone()[0]
+        # Se não houver simulados feitos, define uma média padrão de teste
+        media_simulado = int(media_simulado) if media_simulado else 75 
+
+        cur.close()
+        conn.close()
+        
+        # Formata os dados das redações para o Frontend
+        historico_redacoes = []
+        for r in redacoes_banco:
+            historico_redacoes.append({
+                "tema": r[0],
+                "nota": r[1]
+            })
+            
+        return jsonify({
+            "status": "sucesso",
+            "media_simulado": media_simulado,
+            "historico_redacoes": historico_redacoes
+        })
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

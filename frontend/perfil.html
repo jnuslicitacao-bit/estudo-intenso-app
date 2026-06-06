@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Estudo Intenso - Meu Desempenho</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
+        .container { max-width: 800px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
+        .grid-stats { display: flex; gap: 20px; margin-bottom: 30px; }
+        .stat-card { flex: 1; padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: center; border-left: 5px solid #007bff; }
+        .stat-card.redacao { border-left-color: #ffc107; }
+        .stat-card h3 { margin: 0; color: #666; font-size: 14px; }
+        .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #222; }
+        .grafico-bloco { margin-top: 20px; height: 300px; }
+        .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
+    <h2>Análise de Desempenho Estratégico</h2>
+    <p>Acompanhe sua evolução ativa para garantir a fixação do conteúdo.</p>
+
+    <div class="grid-stats">
+        <div class="stat-card">
+            <h3>Taxa Média nos Simulados</h3>
+            <p id="txt-media-simulado">--%</p>
+        </div>
+        <div class="stat-card redacao">
+            <h3>Última Nota de Redação</h3>
+            <p id="txt-ultima-redacao">---/1000</p>
+        </div>
+    </div>
+
+    <div class="grafico-bloco">
+        <canvas id="graficoEvolucao"></canvas>
+    </div>
+</div>
+
+<script>
+    async function carregarDadosDesempenho() {
+        try {
+            const resposta = await fetch('http://localhost:5000/api/desempenho');
+            const dados = await resposta.json();
+
+            if (dados.status === "sucesso") {
+                // Atualiza os cards textuais
+                document.getElementById('txt-media-simulado').innerText = dados.media_simulado + "%";
+                
+                const temRedacao = dados.historico_redacoes.length > 0;
+                document.getElementById('txt-ultima-redacao').innerText = temRedacao ? dados.historico_redacoes[0].nota + "/1000" : "Nenhuma";
+
+                // Prepara os dados para o Gráfico de Linha (Evolução das Redações)
+                const notasRedacao = temRedacao ? dados.historico_redacoes.map(r => r.nota).reverse() : [0];
+                const labelsRedacao = temRedacao ? dados.historico_redacoes.map((r, i) => `Redação ${i+1}`).reverse() : ["Sem dados"];
+
+                // Renderiza o gráfico na tela usando Chart.js
+                const ctx = document.getElementById('graficoEvolucao').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labelsRedacao,
+                        datasets: [{
+                            label: 'Evolução Escrita (Notas)',
+                            data: notasRedacao,
+                            borderColor: '#ffc107',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { min: 0, max: 1000 } }
+                    }
+                });
+            }
+        } catch (erro) {
+            console.error("Erro ao buscar dados de desempenho:", erro);
+        }
+    }
+
+    // Executa a função ao carregar a página
+    carregarDadosDesempenho();
+</script>
+</body>
+</html>
