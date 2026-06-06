@@ -17,6 +17,16 @@
 <body>
 
 <div class="container">
+    <div style="background: #e9ecef; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <span style="font-weight: bold; color: #495057;">⏱️ Modo FocoAtivo:</span>
+            <span id="tipo-timer" style="margin-left: 5px; color: #dc3545; font-weight: bold;">Focar!</span>
+        </div>
+        <div id="cronometro" style="font-size: 24px; font-weight: bold; font-family: monospace; color: #212529;">25:00</div>
+            <div>
+                <button id="btn-timer" onclick="alternarTimer()" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px;">Iniciar Foco</button>
+            </div>
+    </div>
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Simulado Dinâmico</h2>
         <span id="materia" class="materia-tag">Carregando...</span>
@@ -34,6 +44,61 @@
 </div>
 
 <script>
+    // VARIÁVEIS DO TIMER POMODORO
+let tempoRestante = 25 * 60; // 25 minutos em segundos
+let cronometroIntervalo = null;
+let emModoFoco = true; // true = foco (25 min), false = pausa (5 min)
+
+function atualizarDisplayTimer() {
+    const minutos = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
+    const segundos = (tempoRestante % 60).toString().padStart(2, '0');
+    document.getElementById('cronometro').innerText = `${minutos}:${segundos}`;
+}
+
+function alternarTimer() {
+    const btn = document.getElementById('btn-timer');
+    
+    if (cronometroIntervalo) {
+        // Se já está rodando, pausa
+        clearInterval(cronometroIntervalo);
+        cronometroIntervalo = null;
+        btn.innerText = "Retomar Foco";
+        btn.style.backgroundColor = "#6c757d";
+    } else {
+        // Se está parado, inicia
+        btn.innerText = "Pausar";
+        btn.style.backgroundColor = "#dc3545";
+        
+        cronometroIntervalo = setInterval(() => {
+            if (tempoRestante > 0) {
+                tempoRestante--;
+                atualizarDisplayTimer();
+            } else {
+                // O tempo acabou! Alterna entre Foco e Pausa
+                clearInterval(cronometroIntervalo);
+                cronometroIntervalo = null;
+                
+                if (emModoFoco) {
+                    alert("⏰ Bloco de foco concluído! Hora de descansar 5 minutos.");
+                    emModoFoco = false;
+                    tempoRestante = 5 * 60; // 5 minutos de pausa
+                    document.getElementById('tipo-timer').innerText = "Descanso";
+                    document.getElementById('tipo-timer').style.color = "#28a745";
+                } else {
+                    alert("💪 Pausa terminada! Pronto para mais 25 minutos de estudo intenso?");
+                    emModoFoco = true;
+                    tempoRestante = 25 * 60; // 25 minutos de foco
+                    document.getElementById('tipo-timer').innerText = "Focar!";
+                    document.getElementById('tipo-timer').style.color = "#dc3545";
+                }
+                
+                atualizarDisplayTimer();
+                btn.innerText = "Iniciar Próximo";
+                btn.style.backgroundColor = "#28a745";
+            }
+        }, 1000);
+    }
+}
     let questoes = [];
     let indiceAtual = 0;
 
