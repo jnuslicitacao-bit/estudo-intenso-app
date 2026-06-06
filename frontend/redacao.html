@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Estudo Intenso - Redação</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 200px; margin-top: 10px; margin-bottom: 10px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+        .resultado { margin-top: 20px; padding: 15px; background: #e2f0d9; display: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Módulo de Redação Dissertativa</h2>
+    <label>Tema da Redação:</label>
+    <input type="text" id="tema" value="O impacto da Inteligência Artificial na educação brasileira" style="width: 100%;">
+    
+    <label><br>Escreva seu texto abaixo:</label>
+    <textarea id="textoRedacao" placeholder="Comece sua introdução aqui..."></textarea>
+    
+    <button onclick="enviarRedacao()">Enviar para Correção Inteligente</button>
+
+    <div id="resultadoBloco" class="resultado">
+        <h3>Resultado da Correção:</h3>
+        <p><strong>Nota:</strong> <span id="notaIa"></span>/1000</p>
+        <p><strong>Análise:</strong> <span id="feedbackIa"></span></p>
+    </div>
+</div>
+
+<script>
+    async function enviarRedacao() {
+        const tema = document.getElementById('tema').value;
+        const texto = document.getElementById('textoRedacao').value;
+
+        // Envia os dados para o servidor Python
+        const resposta = await fetch('http://localhost:5000/api/redacao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tema: tema, texto: texto })
+        });
+
+        const resultado = await reply = await resposta.json();
+        
+        // Exibe o resultado na tela
+        document.getElementById('resultadoBloco').style.display = 'block';
+        document.getElementById('notaIa').innerText = resultado.nota;
+        document.getElementById('feedbackIa').innerText = resultado.feedback;
+    }
+</script>
+</body>
+</html>
