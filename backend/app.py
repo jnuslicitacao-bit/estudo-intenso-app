@@ -1,31 +1,102 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pg8000.dbapi
 from openai import OpenAI
-import os
-from dotenv import load_dotenv  # <-- Importa o carregador de ambiente
+from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 
-# Carrega as variáveis do arquivo .env
+# Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# O Python agora busca a chave no sistema operacional, escondendo-a do código público
+# Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_db_connection():
-# ... (o resto do código do banco e das rotas continua igualzinho)
+    """Gerencia a conexão com o banco de dados PostgreSQL usando pg8000"""
     return pg8000.dbapi.connect(
         host="localhost",
         database="estudo_intenso_db",
         user="postgres",
-        password="nova_senha123"
+        password="nova_senha123"  # Sua senha atualizada
     )
+
+# ==========================================
+# ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
+# ==========================================
+
+@app.route('/api/cadastro', methods=['POST'])
+def cadastrar_usuario():
+    """Rota para registrar novos estudantes com senha criptografada"""
+    dados = request.get_json()
+    nome = dados.get('nome')
+    email = dados.get('email')
+    senha = dados.get('senha')
+
+    if not nome or not email or not senha:
+        return jsonify({"status": "erro", "mensagem": "Preencha todos os campos obrigatórios."}), 400
+
+    # Criptografia segura da senha (Gera um Hash)
+    senha_criptografada = generate_password_hash(senha)
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s, %s, %s) RETURNING id;",
+            (nome, email, senha_criptografada)
+        )
+        usuario_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"status": "sucesso", "mensagem": "Usuário cadastrado com sucesso!", "usuario_id": usuario_id}), 201
+    except Exception:
+        return jsonify({"status": "erro", "mensagem": "Este e-mail já está cadastrado no sistema."}), 400
+
+@app.route('/api/login', methods=['POST'])
+def login_usuario():
+    """Rota para validar o acesso do estudante"""
+    dados = request.get_json()
+    email = dados.get('email')
+    senha = dados.get('senha')
+
+    if not email or not senha:
+        return jsonify({"status": "erro", "mensagem": "E-mail e senha são obrigatórios."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, nome, senha_hash FROM usuarios WHERE email = %s;", (email,))
+    usuario = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    # Compara a senha digitada com o Hash seguro salvo no banco
+    if usuario and check_password_hash(usuario[2], senha):
+        return jsonify({
+            "status": "sucesso",
+            "usuario": {
+                "id": usuario[0],
+                "nome": usuario[1],
+                "email": email
+            }
+        }), 200
+    else:
+        return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
+
+
+# ==========================================
+# ROTAS DO SISTEMA DE SIMULADOS E REDAÇÃO
+# ==========================================
 
 @app.route('/api/questoes', methods=['GET'])
 def obter_questoes():
+    """Busca questões de fixação ativa no banco de dados para o simulado"""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e FROM questoes LIMIT 10;")
@@ -36,13 +107,16 @@ def obter_questoes():
     lista_questoes = []
     for q in questoes:
         lista_questoes.append({
-            "id": q[0], "materia": q[1], "enunciado": q[2],
+            "id": q[0], 
+            "materia": q[1], 
+            "enunciado": q[2],
             "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
         })
     return jsonify(lista_questoes)
 
 @app.route('/api/redacao', methods=['POST'])
 def corrigir_redacao():
+    """Envia o texto argumentativo para avaliação real da inteligência GPT-4o-mini"""
     dados = request.get_json()
     texto_aluno = dados.get('texto')
     tema = dados.get('tema')
@@ -50,7 +124,6 @@ def corrigir_redacao():
     if not texto_aluno or not tema:
         return jsonify({"status": "erro", "mensagem": "Texto ou tema ausentes."}), 400
 
-    # Engrenagem de Prompt focada na estratégia de correção rigorosa
     prompt_sistema = "Você é um corretor especialista em redações dissertativo-argumentativas no modelo do ENEM. Avalie com rigor."
     prompt_usuario = f"""
     Analise a redação abaixo com base no tema proposto.
@@ -65,28 +138,26 @@ def corrigir_redacao():
     """
 
     try:
-        # CHAMADA OFICIAL DA API DA OPENAI (Utilizando gpt-4o-mini por ser rápido e barato)
         resposta = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": prompt_usuario}
             ],
-            temperature=0.3 # Mantém a IA focada e menos "criativa/imprevisível" na nota
+            temperature=0.3
         )
         
         resposta_ia = resposta.choices[0].message.content
         
-        # Separando dinamicamente a NOTA do resto do FEEDBACK enviado pela OpenAI
         try:
             linhas = resposta_ia.split('\n')
             nota_final = int(linhas[0].replace('NOTA:', '').strip())
             feedback_real = resposta_ia.replace(linhas[0], '').replace('ANÁLISE:', '').strip()
         except Exception:
-            nota_final = 740  # Nota padrão de contingência caso mude a formatação
+            nota_final = 740  
             feedback_real = resposta_ia
 
-        # GRAVANDO O RESULTADO REAL NO BANCO POSTGRESQL
+        # Registra a correção oficial no banco vinculado ao usuário de testes (ID 1)
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
@@ -108,25 +179,23 @@ def corrigir_redacao():
 
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
-    """Rota que puxa o histórico de estudos do aluno para criar os gráficos"""
+    """Busca métricas históricas de evolução para alimentar os gráficos do aluno"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Puxa o histórico de redações
+        # Coleta o histórico das últimas 5 redações avaliadas
         cur.execute("SELECT tema, nota_final, data_envio FROM redacoes WHERE usuario_id = 1 ORDER BY data_envio DESC LIMIT 5;")
         redacoes_banco = cur.fetchall()
         
-        # 2. Puxa a média dos simulados (Para o MVP, criamos uma média simples)
+        # Calcula a média de aproveitamento nos simulados
         cur.execute("SELECT AVG(nota) FROM simulados_historico WHERE usuario_id = 1;")
         media_simulado = cur.fetchone()[0]
-        # Se não houver simulados feitos, define uma média padrão de teste
         media_simulado = int(media_simulado) if media_simulado else 75 
 
         cur.close()
         conn.close()
         
-        # Formata os dados das redações para o Frontend
         historico_redacoes = []
         for r in redacoes_banco:
             historico_redacoes.append({
@@ -141,5 +210,6 @@ def obter_desempenho():
         })
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

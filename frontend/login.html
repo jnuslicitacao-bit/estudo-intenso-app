@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Estudo Intenso - Acesso</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .auth-header { text-align: center; margin-bottom: 25px; }
+        .auth-header h2 { margin: 0; color: #333; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; background-color: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        .alternar { text-align: center; margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; }
+        .alternar:hover { text-decoration: underline; color: #007bff; }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="auth-header">
+        <h2 id="titulo-tela">Entrar no Estudo Intenso</h2>
+    </div>
+
+    <input type="text" id="campo-nome" placeholder="Seu Nome Completo" style="display: none;">
+    <input type="email" id="campo-email" placeholder="Seu E-mail">
+    <input type="password" id="campo-senha" placeholder="Sua Senha">
+
+    <button id="btn-acao" onclick="executarAcao()">Entrar</button>
+
+    <p id="btn-alternar" class="alternar" onclick="alternarModo()">Não tem uma conta? Cadastre-se</p>
+</div>
+
+<script>
+    let modoLogin = true; // Controla se a tela está em modo Login ou Cadastro
+
+    function alternarModo() {
+        modoLogin = !modoLogin;
+        const titulo = document.getElementById('titulo-tela');
+        const campoNome = document.getElementById('campo-nome');
+        const btnAcao = document.getElementById('btn-acao');
+        const btnAlternar = document.getElementById('btn-alternar');
+
+        if (modoLogin) {
+            titulo.innerText = "Entrar no Estudo Intenso";
+            campoNome.style.display = "none";
+            btnAcao.innerText = "Entrar";
+            btnAlternar.innerText = "Não tem uma conta? Cadastre-se";
+        } else {
+            titulo.innerText = "Criar Conta de Estudante";
+            campoNome.style.display = "block";
+            btnAcao.innerText = "Cadastrar e Estudar";
+            btnAlternar.innerText = "Já tem uma conta? Faça Login";
+        }
+    }
+
+    async function executarAcao() {
+        const email = document.getElementById('campo-email').value;
+        const senha = document.getElementById('campo-senha').value;
+        const nome = document.getElementById('campo-nome').value;
+
+        const rota = modoLogin ? '/api/login' : '/api/cadastro';
+        const payload = modoLogin ? { email, senha } : { nome, email, senha };
+
+        try {
+            const resposta = await fetch(`http://localhost:5000${rota}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const resultado = await resposta.json();
+
+            if (resposta.ok) {
+                if (modoLogin) {
+                    // Armazena temporariamente os dados do usuário logado no navegador
+                    localStorage.setItem('usuario_estudo', JSON.stringify(resultado.usuario));
+                    alert(`Bem-vindo de volta, ${resultado.usuario.nome}!`);
+                    window.location.href = 'index.html'; // Redireciona para o painel
+                } else {
+                    alert("Cadastro realizado com sucesso! Faça seu login.");
+                    alternarModo();
+                }
+            } else {
+                alert(resultado.mensagem);
+            }
+        } catch (erro) {
+            alert("Erro ao conectar com o servidor.");
+        }
+    }
+</script>
+</body>
+</html>
