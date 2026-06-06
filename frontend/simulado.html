@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Estudo Intenso - Simulado Rápido</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
+        .container { max-width: 700px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
+        .materia-tag { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .opcao { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .opcao:hover { background-color: #f0f4f8; border-color: #007bff; }
+        .botoes { margin-top: 20px; display: flex; justify-content: space-between; }
+        button { background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        button:disabled { background-color: #ccc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Simulado Dinâmico</h2>
+        <span id="materia" class="materia-tag">Carregando...</span>
+    </div>
+    <hr>
+    
+    <p id="enunciado" style="font-size: 18px; line-height: 1.6;">Aguardando questões do servidor...</p>
+
+    <div id="bloco-opcoes">
+        </div>
+
+    <div class="botoes">
+        <button id="btn-proxima" onclick="proximaQuestao()">Avançar Questão</button>
+    </div>
+</div>
+
+<script>
+    let questoes = [];
+    let indiceAtual = 0;
+
+    // Função que busca as questões lá no seu Backend Python
+    async function carregarSimulado() {
+        try {
+            const resposta = await fetch('http://localhost:5000/api/questoes');
+            questoes = await resposta.json();
+            
+            if(questoes.length > 0) {
+                mostrarQuestao();
+            } else {
+                document.getElementById('enunciado').innerText = "Nenhuma questão encontrada no banco.";
+            }
+        } catch (erro) {
+            document.getElementById('enunciado').innerText = "Erro ao conectar com o backend. O servidor Python está rodando?";
+        }
+    }
+
+    // Função que renderiza a questão atual na tela
+    function mostrarQuestao() {
+        const q = questoes[indiceAtual];
+        document.getElementById('materia').innerText = q.materia.toUpperCase();
+        document.getElementById('enunciado').innerText = `${indiceAtual + 1}. ${q.enunciado}`;
+        
+        const blocoOpcoes = document.getElementById('bloco-opcoes');
+        blocoOpcoes.innerHTML = ''; // Limpa as opções anteriores
+
+        // Loop pelas alternativas A, B, C, D, E
+        for (const [letra, texto] of Object.entries(q.opcoes)) {
+            blocoOpcoes.innerHTML += `
+                <div class="opcao" onclick="selecionarOpcao('${letra}')">
+                    <strong>${letra})</strong> ${texto}
+                </div>
+            `;
+        }
+
+        if (indiceAtual === questoes.length - 1) {
+            document.getElementById('btn-proxima').innerText = "Finalizar Simulado";
+        }
+    }
+
+    function selecionarOpcao(letra) {
+        alert(`Você selecionou a alternativa ${letra}. No app completo, salvamos isso para gerar sua nota!`);
+    }
+
+    function proximaQuestao() {
+        if (indiceAtual < questoes.length - 1) {
+            indiceAtual++;
+            mostrarQuestao();
+        } else {
+            alert("Simulado concluído com sucesso! Excelente treino focado.");
+            window.location.reload(); // Reseta para o teste
+        }
+    }
+
+    // Inicializa o simulado quando a página abre
+    carregarSimulado();
+</script>
+</body>
+</html>
