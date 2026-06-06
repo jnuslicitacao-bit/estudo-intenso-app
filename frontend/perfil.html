@@ -40,9 +40,21 @@
 </div>
 
 <script>
+    // TRAVA DE SEGURANÇA: Verifica se o usuário está logado antes de carregar as métricas
+    const dadosUsuario = localStorage.getItem('usuario_estudo');
+    
+    if (!dadosUsuario) {
+        alert("Acesso negado! Por favor, faça login primeiro.");
+        window.location.href = 'login.html';
+    }
+
     async function carregarDadosDesempenho() {
         try {
-            const resposta = await fetch('http://localhost:5000/api/desempenho');
+            // Decodifica os dados do usuário para obter o ID real
+            const usuario = JSON.parse(dadosUsuario);
+
+            // Envia o ID de forma dinâmica na URL para o backend filtrar os dados certos
+            const resposta = await fetch(`http://localhost:5000/api/desempenho?usuario_id=${usuario.id}`);
             const dados = await resposta.json();
 
             if (dados.status === "sucesso") {
@@ -78,6 +90,8 @@
                         scales: { y: { min: 0, max: 1000 } }
                     }
                 });
+            } else {
+                console.error("Erro retornado pelo servidor:", dados.mensagem);
             }
         } catch (erro) {
             console.error("Erro ao buscar dados de desempenho:", erro);
