@@ -1,38 +1,42 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pg8000.dbapi  # <-- Mudamos o driver aqui
+import pg8000.dbapi
+from openai import OpenAI
+import os
+from dotenv import load_dotenv  # <-- Importa o carregador de ambiente
+
+# Carrega as variáveis do arquivo .env
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
+# O Python agora busca a chave no sistema operacional, escondendo-a do código público
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 def get_db_connection():
-    # O pg8000 recebe os parâmetros diretamente e processa tudo em Python puro (UTF-8)
-    conn = pg8000.dbapi.connect(
+# ... (o resto do código do banco e das rotas continua igualzinho)
+    return pg8000.dbapi.connect(
         host="localhost",
         database="estudo_intenso_db",
-        user="postgres",            # Insira seu usuário real aqui
-        password="nova_senha123" # Insira sua senha real aqui
+        user="postgres",
+        password="nova_senha123"
     )
-    return conn
 
 @app.route('/api/questoes', methods=['GET'])
 def obter_questoes():
     conn = get_db_connection()
     cur = conn.cursor()
-    
-    # Executa a busca das questões
     cur.execute("SELECT id, materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e FROM questoes LIMIT 10;")
     questoes = cur.fetchall()
-    
     cur.close()
     conn.close()
     
     lista_questoes = []
     for q in questoes:
         lista_questoes.append({
-            "id": q[0], 
-            "materia": q[1], 
-            "enunciado": q[2],
+            "id": q[0], "materia": q[1], "enunciado": q[2],
             "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
         })
     return jsonify(lista_questoes)
@@ -43,26 +47,64 @@ def corrigir_redacao():
     texto_aluno = dados.get('texto')
     tema = dados.get('tema')
     
-    nota_simulada = 840
-    feedback_simulado = "Competência 1: Excelente vocabulário. Competência 5: Melhore a proposta de intervenção."
+    if not texto_aluno or not tema:
+        return jsonify({"status": "erro", "mensagem": "Texto ou tema ausentes."}), 400
 
-    conn = get_db_connection()
-    cur = conn.cursor()
+    # Engrenagem de Prompt focada na estratégia de correção rigorosa
+    prompt_sistema = "Você é um corretor especialista em redações dissertativo-argumentativas no modelo do ENEM. Avalie com rigor."
+    prompt_usuario = f"""
+    Analise a redação abaixo com base no tema proposto.
     
-    # O pg8000 usa %s ou parâmetros normais para inserção de dados de forma segura
-    cur.execute(
-        "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-        (1, tema, texto_aluno, nota_simulada, feedback_simulado)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    TEMA: {tema}
+    TEXTO DO ALUNO:
+    {texto_aluno}
+    
+    Responda ESTRITAMENTE no formato abaixo, sem saudações ou textos adicionais de introdução/conclusão:
+    NOTA: [Insira aqui a nota final de 0 a 1000]
+    ANÁLISE: [Insira aqui um feedback detalhado dividindo por pontos fortes, erros gramaticais encontrados e como melhorar a proposta de intervenção]
+    """
 
-    return jsonify({
-        "status": "sucesso",
-        "nota": nota_simulada,
-        "feedback": feedback_simulado
-    })
+    try:
+        # CHAMADA OFICIAL DA API DA OPENAI (Utilizando gpt-4o-mini por ser rápido e barato)
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.3 # Mantém a IA focada e menos "criativa/imprevisível" na nota
+        )
+        
+        resposta_ia = resposta.choices[0].message.content
+        
+        # Separando dinamicamente a NOTA do resto do FEEDBACK enviado pela OpenAI
+        try:
+            linhas = resposta_ia.split('\n')
+            nota_final = int(linhas[0].replace('NOTA:', '').strip())
+            feedback_real = resposta_ia.replace(linhas[0], '').replace('ANÁLISE:', '').strip()
+        except Exception:
+            nota_final = 740  # Nota padrão de contingência caso mude a formatação
+            feedback_real = resposta_ia
+
+        # GRAVANDO O RESULTADO REAL NO BANCO POSTGRESQL
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
+            (1, tema, texto_aluno, nota_final, feedback_real)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "status": "sucesso",
+            "nota": nota_final,
+            "feedback": feedback_real
+        })
+
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": f"Falha na API da OpenAI: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
