@@ -40,7 +40,6 @@ def cadastrar_usuario():
     if not nome or not email or not senha:
         return jsonify({"status": "erro", "mensagem": "Preencha todos os campos obrigatórios."}), 400
 
-    # Criptografia segura da senha (Gera um Hash)
     senha_criptografada = generate_password_hash(senha)
 
     try:
@@ -76,7 +75,6 @@ def login_usuario():
     cur.close()
     conn.close()
 
-    # Compara a senha digitada com o Hash seguro salvo no banco
     if usuario and check_password_hash(usuario[2], senha):
         return jsonify({
             "status": "sucesso",
@@ -114,15 +112,41 @@ def obter_questoes():
         })
     return jsonify(lista_questoes)
 
+@app.route('/api/simulado/salvar', methods=['POST'])
+def salvar_simulado():
+    """Registra a pontuação real do estudante após concluir um simulado"""
+    dados = request.get_json()
+    usuario_id = dados.get('usuario_id')
+    materia = dados.get('materia')
+    nota = dados.get('nota')
+
+    if not usuario_id or not materia or nota is None:
+        return jsonify({"status": "erro", "mensagem": "Dados incompletos para salvar."}), 400
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO simulados_historico (usuario_id, materia, nota) VALUES (%s, %s, %s);",
+            (usuario_id, materia, nota)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"status": "sucesso", "mensagem": "Resultado do simulado salvo!"}), 201
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 @app.route('/api/redacao', methods=['POST'])
 def corrigir_redacao():
-    """Envia o texto argumentativo para avaliação real da inteligência GPT-4o-mini"""
+    """Envia o texto para a OpenAI e vincula ao ID do usuário logado"""
     dados = request.get_json()
     texto_aluno = dados.get('texto')
     tema = dados.get('tema')
+    usuario_id = dados.get('usuario_id')
     
-    if not texto_aluno or not tema:
-        return jsonify({"status": "erro", "mensagem": "Texto ou tema ausentes."}), 400
+    if not texto_aluno or not tema or not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Dados incompletos."}), 400
 
     prompt_sistema = "Você é um corretor especialista em redações dissertativo-argumentativas no modelo do ENEM. Avalie com rigor."
     prompt_usuario = f"""
@@ -157,12 +181,11 @@ def corrigir_redacao():
             nota_final = 740  
             feedback_real = resposta_ia
 
-        # Registra a correção oficial no banco vinculado ao usuário de testes (ID 1)
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-            (1, tema, texto_aluno, nota_final, feedback_real)
+            (usuario_id, tema, texto_aluno, nota_final, feedback_real)
         )
         conn.commit()
         cur.close()
@@ -179,19 +202,23 @@ def corrigir_redacao():
 
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
-    """Busca métricas históricas de evolução para alimentar os gráficos do aluno"""
+    """Busca métricas históricas filtrando pelo ID dinâmico do usuário logado"""
+    usuario_id = request.args.get('usuario_id')
+    
+    if not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
+        
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Coleta o histórico das últimas 5 redações avaliadas
-        cur.execute("SELECT tema, nota_final, data_envio FROM redacoes WHERE usuario_id = 1 ORDER BY data_envio DESC LIMIT 5;")
+        # Puxa histórico completo incluindo o texto do aluno e o feedback da IA
+        cur.execute("SELECT tema, nota_final, texto, feedback_ia FROM redacoes WHERE usuario_id = %s ORDER BY data_envio DESC LIMIT 5;", (usuario_id,))
         redacoes_banco = cur.fetchall()
         
-        # Calcula a média de aproveitamento nos simulados
-        cur.execute("SELECT AVG(nota) FROM simulados_historico WHERE usuario_id = 1;")
+        cur.execute("SELECT AVG(nota) FROM simulados_historico WHERE usuario_id = %s;", (usuario_id,))
         media_simulado = cur.fetchone()[0]
-        media_simulado = int(media_simulado) if media_simulado else 75 
+        media_simulado = int(media_simulado) if media_simulado else 0 
 
         cur.close()
         conn.close()
@@ -200,7 +227,9 @@ def obter_desempenho():
         for r in redacoes_banco:
             historico_redacoes.append({
                 "tema": r[0],
-                "nota": r[1]
+                "nota": r[1],
+                "texto": r[2],
+                "feedback": r[3]
             })
             
         return jsonify({
@@ -212,4 +241,5 @@ def obter_desempenho():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
+    app.run(debug=False, port=5000)

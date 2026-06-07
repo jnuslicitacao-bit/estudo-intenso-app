@@ -14,6 +14,8 @@
         .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #222; }
         .grafico-bloco { margin-top: 20px; height: 300px; }
         .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .btn-lista { text-align: left; background: #fff; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; color: #334155; transition: 0.2s; width: 100%; }
+        .btn-lista:hover { background: #f8fafc; border-color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -37,12 +39,30 @@
     <div class="grafico-bloco">
         <canvas id="graficoEvolucao"></canvas>
     </div>
+
+    <div style="margin-top: 40px;">
+        <h3>Histórico de Redações e Feedbacks IA</h3>
+        <div id="lista-redacoes" style="display: flex; flex-direction: column; gap: 10px;">
+            </div>
+    </div>
+
+    <div id="painel-revisao" style="display: none; margin-top: 25px; padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 6px;">
+        <h4 id="revisao-tema" style="margin-top: 0; color: #007bff;"></h4>
+        <div style="display: flex; gap: 20px; margin-top: 15px;">
+            <div style="flex: 1; background: #fafafa; padding: 15px; border-radius: 4px; border: 1px solid #eee;">
+                <h5 style="margin-top:0;">Seu Texto Original:</h5>
+                <p id="revisao-texto" style="white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.6;"></p>
+            </div>
+            <div style="flex: 1; background: #fff9e6; padding: 15px; border-radius: 4px; border: 1px solid #ffeeba;">
+                <h5 style="margin-top:0;">Análise da OpenAI:</h5>
+                <p id="revisao-feedback" style="white-space: pre-wrap; font-size: 14px; color: #856404; line-height: 1.6;"></p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // TRAVA DE SEGURANÇA: Verifica se o usuário está logado antes de carregar as métricas
     const dadosUsuario = localStorage.getItem('usuario_estudo');
-    
     if (!dadosUsuario) {
         alert("Acesso negado! Por favor, faça login primeiro.");
         window.location.href = 'login.html';
@@ -50,25 +70,36 @@
 
     async function carregarDadosDesempenho() {
         try {
-            // Decodifica os dados do usuário para obter o ID real
             const usuario = JSON.parse(dadosUsuario);
-
-            // Envia o ID de forma dinâmica na URL para o backend filtrar os dados certos
             const resposta = await fetch(`http://localhost:5000/api/desempenho?usuario_id=${usuario.id}`);
             const dados = await resposta.json();
 
             if (dados.status === "sucesso") {
-                // Atualiza os cards textuais
                 document.getElementById('txt-media-simulado').innerText = dados.media_simulado + "%";
                 
                 const temRedacao = dados.historico_redacoes.length > 0;
                 document.getElementById('txt-ultima-redacao').innerText = temRedacao ? dados.historico_redacoes[0].nota + "/1000" : "Nenhuma";
 
-                // Prepara os dados para o Gráfico de Linha (Evolução das Redações)
+                // Renderiza Lista de Revisão
+                const listaDiv = document.getElementById('lista-redacoes');
+                listaDiv.innerHTML = '';
+
+                if (!temRedacao) {
+                    listaDiv.innerHTML = '<p style="color: #888; font-style: italic;">Você ainda não enviou nenhuma redação para correção.</p>';
+                } else {
+                    dados.historico_redacoes.forEach((redacao) => {
+                        const botao = document.createElement('button');
+                        botao.className = 'btn-lista';
+                        botao.innerHTML = `<span>📝 <strong>Tema:</strong> ${redacao.tema}</span> <strong style="color: #e0a800;">Nota: ${redacao.nota}/1000</strong>`;
+                        botao.onclick = () => abrirRevisao(redacao);
+                        listaDiv.appendChild(botao);
+                    });
+                }
+
+                // Renderiza o gráfico usando Chart.js
                 const notasRedacao = temRedacao ? dados.historico_redacoes.map(r => r.nota).reverse() : [0];
                 const labelsRedacao = temRedacao ? dados.historico_redacoes.map((r, i) => `Redação ${i+1}`).reverse() : ["Sem dados"];
 
-                // Renderiza o gráfico na tela usando Chart.js
                 const ctx = document.getElementById('graficoEvolucao').getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
@@ -90,15 +121,20 @@
                         scales: { y: { min: 0, max: 1000 } }
                     }
                 });
-            } else {
-                console.error("Erro retornado pelo servidor:", dados.mensagem);
             }
         } catch (erro) {
             console.error("Erro ao buscar dados de desempenho:", erro);
         }
     }
 
-    // Executa a função ao carregar a página
+    function abrirRevisao(redacao) {
+        document.getElementById('painel-revisao').style.display = 'block';
+        document.getElementById('revisao-tema').innerText = `Revisão Pedagógica - Tema: ${redacao.tema}`;
+        document.getElementById('revisao-texto').innerText = redacao.texto;
+        document.getElementById('revisao-feedback').innerText = redacao.feedback;
+        document.getElementById('painel-revisao').scrollIntoView({ behavior: 'smooth' });
+    }
+
     carregarDadosDesempenho();
 </script>
 </body>
