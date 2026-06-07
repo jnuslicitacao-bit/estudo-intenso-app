@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Estudo Intenso - Dashboard</title>
-    <div style="text-align: center; margin-bottom: 20px;">
-    <a href="perfil.html" style="color: #007bff; font-weight: bold; text-decoration: none;">📊 Ver Meu Desempenho e Gráficos</a>
-</div>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background-color: #f4f7f6; display: flex; justify-content: center; }
         .dashboard { max-width: 800px; width: 100%; }
-        .header { text-align: center; margin-bottom: 40px; }
+        .header { text-align: center; margin-bottom: 40px; position: relative; }
         .header h1 { color: #333; margin-bottom: 5px; }
         .header p { color: #666; margin-top: 0; }
+        .user-info { background: #e2e3e5; padding: 8px 15px; border-radius: 20px; display: inline-block; font-size: 14px; margin-bottom: 20px; font-weight: bold; }
+        .btn-logout { background: none; border: none; color: #dc3545; cursor: pointer; font-weight: bold; text-decoration: underline; margin-left: 10px; }
         .cards-container { display: flex; gap: 20px; justify-content: space-between; }
         .card { flex: 1; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
@@ -30,6 +29,15 @@
     <div class="header">
         <h1>Estudo Intenso 🚀</h1>
         <p>Estratégia validada de fixação ativa para passar nas provas</p>
+        
+        <div class="user-info">
+            👤 Olá, <span id="nome-usuario">Estudante</span>! 
+            <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px;">
+            <a href="perfil.html" style="color: #007bff; font-weight: bold; text-decoration: none;">📊 Ver Meu Desempenho e Gráficos</a>
+        </div>
     </div>
 
     <div class="cards-container">
@@ -47,5 +55,24 @@
     </div>
 </div>
 
+<script>
+    // TRAVA DE SEGURANÇA: Verifica se o usuário fez login
+    const dadosUsuario = localStorage.getItem('usuario_estudo');
+    
+    if (!dadosUsuario) {
+        // Se não houver dados salvos no navegador, chuta o usuário de volta para a tela de login
+        alert("Acesso negado! Por favor, faça login primeiro.");
+        window.location.href = 'login.html';
+    } else {
+        // Se houver, coloca o nome real dele no topo da tela
+        const usuario = JSON.parse(dadosUsuario);
+        document.getElementById('nome-usuario').innerText = usuario.nome;
+    }
+
+    function fazerLogout() {
+        localStorage.removeItem('usuario_estudo');
+        window.location.href = 'login.html';
+    }
+</script>
 </body>
-</html>
+</html>cd 
