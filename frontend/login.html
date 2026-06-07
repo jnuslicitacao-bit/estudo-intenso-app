@@ -2,39 +2,148 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudo Intensivo - Login</title>
+    <script src="config.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; margin: 0; align-items: center; justify-content: center; }
-        .auth-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
-        h2 { margin-top: 0; color: #333; text-align: center; margin-bottom: 25px; }
-        label { font-weight: bold; color: #4b5563; font-size: 14px; display: block; margin-bottom: 6px; }
-        input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 15px; margin-bottom: 20px; }
-        .btn-auth { background-color: #28a745; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
-        .btn-auth:hover { background-color: #218838; }
-        .footer-link { text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280; }
-        .footer-link a { color: #007bff; text-decoration: none; font-weight: bold; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-global: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-global);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .login-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        .logo-area {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-hover);
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .footer-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-<div class="auth-card">
-    <h2>Acessar Plataforma</h2>
-    
-    <label for="email">E-mail Cadastrado:</label>
-    <input type="email" id="email" placeholder="seuemail@exemplo.com">
+<div class="login-container">
+    <div class="logo-area">🎓 Estudo Intensivo</div>
+    <div class="subtitle">Acesse sua conta para continuar evoluindo</div>
 
-    <label for="senha">Sua Senha:</label>
-    <input type="password" id="senha" placeholder="••••••••">
+    <div class="form-group">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" placeholder="seu@email.com">
+    </div>
 
-    <button class="btn-auth" onclick="executarLogin()">Entrar no Sistema →</button>
+    <div class="form-group">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" placeholder="••••••••">
+    </div>
 
-    <div class="footer-link">
-        Novo por aqui? <a href="cadastro.html">Criar uma conta</a>
+    <button class="btn-submit" onclick="executarLogin()">Entrar no Sistema →</button>
+
+    <div class="footer-links">
+        Não tem uma conta? <a href="cadastro.html">Cadastre-se aqui</a>
     </div>
 </div>
 
 <script>
-    // Mude de "ejecutarLogin" para "executarLogin" com o "r"
     async function executarLogin() {
         const email = document.getElementById('email').value.trim();
         const senha = document.getElementById('senha').value;
@@ -45,7 +154,7 @@
         }
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/login', {
+            const resposta = await fetch(`${CONFIG.URL_BACKEND}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, senha })

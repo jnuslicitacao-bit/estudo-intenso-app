@@ -2,25 +2,203 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Gerador de Simulados IA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudo Intensivo - Simulados IA</title>
     <script src="config.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }
-        .container { max-width: 800px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
-        .materia-tag { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .btn-opcao { display: block; width: 100%; text-align: left; padding: 12px; margin: 8px 0; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 15px; transition: 0.2s; }
-        .btn-opcao:hover { background: #e2e8f0; }
-        .btn-opcao.selecionada { background: #007bff; color: white; border-color: #0056b3; }
-        .btn-navegacao { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn-navegacao:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .btn-ia { border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; background: #8a2be2; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
-        select { width: 100%; padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #cbd5e1; margin-top: 8px; margin-bottom: 12px; background: white; }
-        .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
-        .divisoria { display: flex; align-items: center; text-align: center; color: #64748b; margin: 20px 0; font-size: 14px; }
-        .divisoria::before, .divisoria::after { content: ''; flex: 1; border-bottom: 1px solid #cbd5e1; }
-        .divisoria:not(:empty)::before { margin-right: .25em; }
-        .divisoria:not(:empty)::after { margin-left: .25em; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #eff6ff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --bg-global: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            background-color: var(--bg-global);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 850px;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            margin: auto;
+        }
+
+        .btn-voltar {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-voltar:hover {
+            background-color: #f8fafc;
+            color: var(--text-main);
+        }
+
+        /* TIMER POMODORO */
+        .pomodoro-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 15px 25px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .timer-title { font-weight: 600; color: var(--text-main); font-size: 15px; }
+        .timer-clock { font-size: 26px; font-weight: 700; font-family: monospace; color: var(--text-main); }
+        .btn-timer-action {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        /* PAINEL DE SELEÇÃO */
+        .config-section {
+            background: var(--primary-light);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #dbeafe;
+            margin-bottom: 25px;
+        }
+        .config-label { font-weight: 700; color: #1e40af; font-size: 16px; display: block; margin-bottom: 6px; }
+        .config-desc { margin: 0 0 15px 0; font-size: 14px; color: #1e3a8a; opacity: 0.8; }
+        
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            background: white;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary-action {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-primary-action:hover { background-color: var(--primary-hover); }
+        
+        .btn-ia-action {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            background-color: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-ia-action:hover { background-color: #7c3aed; }
+        .btn-ia-action:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+        .divisoria {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            margin: 25px 0;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .divisoria::before, .divisoria::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+        .divisoria:not(:empty)::before { margin-right: 1em; }
+        .divisoria:not(:empty)::after { margin-left: 1em; }
+
+        /* INTERFACE DE QUESTÕES */
+        .materia-tag { background: var(--primary-light); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .enunciado-text { font-size: 18px; line-height: 1.6; color: var(--text-main); margin: 25px 0; font-weight: 500; }
+        
+        .btn-opcao {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 14px 20px;
+            margin: 10px 0;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .btn-opcao:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn-opcao.selecionada { background: var(--primary); color: white; border-color: var(--primary-hover); }
+
+        .btn-submit-prova {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        .btn-submit-prova:hover { background: #059669; }
+        .btn-submit-prova:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        .btn-comment-ia {
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            margin-top: 8px;
+            background: #8b5cf6;
+            transition: background 0.2s;
+        }
+        .btn-comment-ia:hover { background: #7c3aed; }
+        .btn-comment-ia:disabled { background: #cbd5e1; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -28,62 +206,63 @@
 <div class="container">
     <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
 
-    <div style="background: #e9ecef; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="pomodoro-box">
         <div>
-            <span style="font-weight: bold; color: #495057;">⏱️ Modo FocoAtivo:</span>
-            <span id="tipo-timer" style="margin-left: 5px; color: #dc3545; font-weight: bold;">Focar!</span>
+            <span class="timer-title">⏱️ Modo FocoAtivo:</span>
+            <span id="tipo-timer" style="margin-left: 5px; color: var(--danger); font-weight: 700;">Focar!</span>
         </div>
-        <div id="cronometro" style="font-size: 24px; font-weight: bold; font-family: monospace; color: #212529;">25:00</div>
+        <div id="cronometro" class="timer-clock">25:00</div>
         <div>
-            <button id="btn-timer" onclick="alternarTimer()" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px; color: white; border: none; border-radius: 4px; cursor: pointer;">Iniciar Foco</button>
+            <button id="btn-timer" class="btn-timer-action" onclick="alternarTimer()">Iniciar Foco</button>
         </div>
     </div>
 
     <div id="bloco-selecao-materia">
-        <h3 style="margin-top: 0; color: #334155; text-align: center;">🎯 Configure Seu Treinamento de Alta Performance</h3>
+        <h3 style="margin-top: 0; color: var(--text-main); text-align: center; font-size: 22px; font-weight: 700;">Configure Seu Treinamento de Alta Performance</h3>
+        <p style="text-align: center; color: var(--text-muted); font-size: 15px; margin-top: -10px; margin-bottom: 30px;">Escolha o motor de geração ideal para sua rotina de estudos</p>
         
-        <div style="background: #f3e8ff; padding: 20px; border-radius: 6px; border: 1px solid #d8b4fe; margin-bottom: 15px;">
-            <label style="font-weight: bold; color: #6b21a8;" for="busca-banca">🤖 Gerador de Provas por Inteligência Artificial</label>
-            <p style="margin: 4px 0 12px 0; font-size: 13px; color: #581c87;">Digite a banca ou concurso alvo para a IA formular questões no padrão exato exigido.</p>
-            <input type="text" id="busca-banca" placeholder="Ex: Enem, EsSA, Senai RJ, FGV, Cesgranrio...">
-            <button id="btn-gerar-ia" class="btn-ia" style="width: 100%; padding: 12px; font-size: 16px;" onclick="iniciarSimuladoIA()">Simular Estudo de Banca Especializada</button>
+        <div class="config-section">
+            <label class="config-label" for="busca-banca">🤖 Gerador de Provas por Inteligência Artificial</label>
+            <p class="config-desc">Digite a banca ou concurso alvo para a IA formular questões autorais e inéditas no padrão exigido.</p>
+            <input type="text" id="busca-banca" placeholder="Ex: Enem, EsSA, FGV, Cesgranrio, Vunesp...">
+            <button id="btn-gerar-ia" class="btn-ia-action" onclick="iniciarSimuladoIA()">Simular Estudo de Banca Especializada</button>
         </div>
 
-        <div class="divisoria">OU UTILIZE O HISTÓRICO LOCAL</div>
+        <div class="divisoria">ou use o histórico local</div>
 
-        <div style="background: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
-            <label style="font-weight: bold; color: #334155;" for="filtro-materia">Simulado Tradicional Fixado no Banco</label>
+        <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+            <label style="font-weight: 600; color: var(--text-main); display: block; margin-bottom: 12px;" for="filtro-materia">Simulado Tradicional Fixado no Banco</label>
             <select id="filtro-materia">
                 <option value="">-- Matérias Misturadas (Geral) --</option>
                 <option value="Matemática">Matemática</option>
                 <option value="História">História</option>
                 <option value="Português">Português</option>
             </select>
-            <button style="width: 100%; padding: 12px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="iniciarSimuladoTradicional()">Iniciar de Forma Tradicional</button>
+            <button class="btn-primary-action" onclick="iniciarSimuladoTradicional()">Iniciar de Forma Tradicional</button>
         </div>
     </div>
 
     <div id="bloco-questoes-simulado" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 id="titulo-simulado">Simulado Dinâmico</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 id="titulo-simulado" style="margin: 0; font-size: 22px; font-weight: 700;">Simulado Dinâmico</h2>
             <span id="materia" class="materia-tag">Carregando...</span>
         </div>
-        <hr>
+        <div style="border-bottom: 1px solid var(--border-color); margin-bottom: 20px;"></div>
         
-        <p id="enunciado" style="font-size: 18px; line-height: 1.6; margin: 20px 0;"></p>
+        <p id="enunciado" class="enunciado-text"></p>
         <div id="alternativas-questao"></div>
 
-        <button id="btn-proxima" class="btn-navegacao" onclick="proximaQuestao()" disabled>Confirmar Resposta & Avançar →</button>
+        <button id="btn-proxima" class="btn-submit-prova" onclick="proximaQuestao()" disabled>Confirmar Resposta & Avançar →</button>
     </div>
 
     <div id="bloco-revisao-gabarito" style="display: none; margin-top: 25px;">
-        <h2 style="color: #28a745;">🏁 Caderno Avaliado com Sucesso!</h2>
-        <div id="card-resultado-pontos" style="background: #e2e8f0; padding: 20px; border-radius: 6px; font-size: 18px; font-weight: bold; margin-bottom: 25px; text-align: center;"></div>
+        <h2 style="color: var(--success); font-size: 24px; font-weight: 700; margin-bottom: 10px;">🏁 Caderno Avaliado com Sucesso!</h2>
+        <div id="card-resultado-pontos" style="background: #f1f5f9; padding: 20px; border-radius: 10px; font-size: 16px; font-weight: 700; margin-bottom: 30px; text-align: center; border: 1px solid var(--border-color);"></div>
         
-        <h3>🔍 Espelho de Correção Pedagógica</h3>
+        <h3 style="font-size: 18px; margin-bottom: 15px;">🔍 Espelho de Correção Pedagógica</h3>
         <div id="container-revisao-questoes" style="display: flex; flex-direction: column; gap: 15px;"></div>
 
-        <button onclick="window.location.href='index.html'" style="background-color: #007bff; color: white; border: none; width: 100%; margin-top: 30px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
+        <button class="btn-primary-action" onclick="window.location.href='index.html'" style="margin-top: 30px;">
             Retornar ao Dashboard Central →
         </button>
     </div>
@@ -115,10 +294,8 @@
             clearInterval(cronometroIntervalo);
             cronometroIntervalo = null;
             btn.innerText = "Retomar Foco";
-            btn.style.backgroundColor = "#6c757d";
         } else {
             btn.innerText = "Pausar";
-            btn.style.backgroundColor = "#dc3545";
             cronometroIntervalo = setInterval(() => {
                 if (tempoRestante > 0) {
                     tempoRestante--;
@@ -131,17 +308,16 @@
                         emModoFoco = false;
                         tempoRestante = 5 * 60;
                         document.getElementById('tipo-timer').innerText = "Descanso";
-                        document.getElementById('tipo-timer').style.color = "#28a745";
+                        document.getElementById('tipo-timer').style.color = var(--success);
                     } else {
                         alert("💪 Descanso terminado! Hora de focar de novo.");
                         emModoFoco = true;
                         tempoRestante = 25 * 60;
                         document.getElementById('tipo-timer').innerText = "Focar!";
-                        document.getElementById('tipo-timer').style.color = "#dc3545";
+                        document.getElementById('tipo-timer').style.color = var(--danger);
                     }
                     atualizarDisplayTimer();
                     btn.innerText = "Iniciar Foco";
-                    btn.style.backgroundColor = "#28a745";
                 }
             }, 1000);
         }
@@ -165,7 +341,7 @@
             
             if (questoes.length > 0) {
                 modoIAAtivo = true;
-                document.getElementById('titulo-simulado').innerText = `Simulado Especializado: ${bancaAlvo}`;
+                document.getElementById('titulo-simulado').innerText = `Banca Alvo: ${bancaAlvo}`;
                 dispararPainelProva();
             } else {
                 alert("Falha ao gerar questões.");
@@ -275,17 +451,17 @@
                 const escolheuCerto = respostasAluno[i] === gabarito;
                 
                 const box = document.createElement('div');
-                box.style.cssText = `padding: 15px; border-radius: 6px; border: 1px solid ${escolheuCerto ? '#badbcc' : '#f5c2c7'}; background: ${escolheuCerto ? '#d1e7dd' : '#f8d7da'}; margin-bottom: 10px; color: #222;`;
+                box.style.cssText = `padding: 20px; border-radius: 12px; border: 1px solid ${escolheuCerto ? '#a7f3d0' : '#fca5a5'}; background: ${escolheuCerto ? '#f0fdf4' : '#fef2f2'}; margin-bottom: 15px; color: #0f172a;`;
                 
                 box.innerHTML = `
                     <strong>Questão ${i + 1} (${q.materia}):</strong>
-                    <p style="margin: 8px 0;">${q.enunciado}</p>
-                    <div style="font-size: 14px; margin-bottom: 10px;">
-                        <span style="color: #155724;">✔️ Gabarito: <strong>${gabarito}</strong></span> | 
-                        <span style="color: ${escolheuCerto ? '#155724' : '#721c24'};">👤 Sua Cópia: <strong>${respostasAluno[i]}</strong></span>
+                    <p style="margin: 10px 0; line-height:1.5;">${q.enunciado}</p>
+                    <div style="font-size: 14px; margin-bottom: 12px; font-weight:600;">
+                        <span style="color: #065f46;">✔️ Gabarito: ${gabarito}</span> | 
+                        <span style="color: ${escolheuCerto ? '#065f46' : '#991b1b'};">👤 Sua Cópia: ${respostasAluno[i]}</span>
                     </div>
-                    <button class="btn-ia" onclick="solicitarComentarioIA(${i}, this)">💡 Explicar Alternativa com IA</button>
-                    <p id="comentario-ia-${i}" style="margin-top: 10px; font-size: 14px; display: none; font-style: italic; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ddd; color: #444; line-height: 1.5;"></p>
+                    <button class="btn-comment-ia" onclick="solicitarComentarioIA(${i}, this)">💡 Explicar Alternativa com IA</button>
+                    <p id="comentario-ia-${i}" style="margin-top: 12px; font-size: 14px; display: none; font-style: italic; background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); color: #334155; line-height: 1.6;"></p>
                 `;
                 container.appendChild(box);
             });
