@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Estudo Intenso - Redação Inteligente</title>
+    <script src="config.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
         .container { max-width: 900px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
@@ -34,42 +35,32 @@
     <div class="layout-redacao">
         <div class="painel-apoio">
             <h4 style="margin-top: 0; color: #007bff;">📖 Textos Motivadores</h4>
-            <div id="textos-motivadores" class="motivadores-box">
-                Selecione um tema acima para exibir os textos de apoio.
-            </div>
+            <div id="textos-motivadores" class="motivadores-box">Selecione um tema acima para exibir os textos de apoio.</div>
         </div>
 
         <div class="painel-escrita">
-            <textarea id="texto-redacao" placeholder="Desenvolva aqui seu texto argumentativo. Lembre-se de estruturar em Introdução, Desenvolvimento e Proposta de Intervenção..." oninput="contarLinhas()"></textarea>
+            <textarea id="texto-redacao" placeholder="Desenvolva aqui seu texto argumentativo..." oninput="contarLinhas()"></textarea>
             <div id="contador-linhas" class="contador">Linhas estimadas: 0 / Mínimo: 7</div>
             
-            <button id="btn-enviar-redacao" class="btn-enviar" onclick="enviarRedacaoParaCorrigir()" disabled>
-                🚀 Enviar para Correção IA
-            </button>
+            <button id="btn-enviar-redacao" class="btn-enviar" onclick="enviarRedacaoParaCorrigir()" disabled>🚀 Enviar para Correção IA</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 1. CONFIGURAÇÕES INICIAIS E SEGURANÇA ---
     const dadosUsuario = localStorage.getItem('usuario_estudo');
-    if (!dadosUsuario) {
-        alert("Acesso negado! Por favor, faça login primeiro.");
-        window.location.href = 'login.html';
-    }
+    if (!dadosUsuario) { window.location.href = 'login.html'; }
     const usuario = JSON.parse(dadosUsuario);
     let listaDeTemas = [];
 
-    // --- 2. CARREGAMENTO DOS TEMAS ---
     async function carregarTemasDoBanco() {
         try {
-            const resposta = await fetch('http://localhost:5000/api/temas');
-            listaDeTemas = await resposta.json();
-            
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/temas`);
+            listaDeTemas = await r.json();
             const seletor = document.getElementById('seletor-temas');
             
             if (!Array.isArray(listaDeTemas) || listaDeTemas.length === 0) {
-                seletor.innerHTML = '<option value="">Nenhum tema disponível no banco.</option>';
+                seletor.innerHTML = '<option value="">Nenhum tema encontrado.</option>';
                 return;
             }
             
@@ -77,39 +68,35 @@
             listaDeTemas.forEach(tema => {
                 seletor.innerHTML += `<option value="${tema.id}">${tema.titulo}</option>`;
             });
-        } catch (erro) {
-            console.error("Erro ao buscar temas:", erro);
-            document.getElementById('seletor-temas').innerHTML = '<option value="">Erro ao conectar com o servidor Python.</option>';
+        } catch (e) {
+            document.getElementById('seletor-temas').innerHTML = '<option value="">Erro ao conectar com o servidor.</option>';
         }
     }
 
-    // --- 3. ATUALIZAÇÃO VISUAL ---
     function atualizarTextosMotivadores() {
-        const idSelecionado = document.getElementById('seletor-temas').value;
+        const id = document.getElementById('seletor-temas').value;
         const painel = document.getElementById('textos-motivadores');
         const botao = document.getElementById('btn-enviar-redacao');
         
-        if (!idSelecionado) {
+        if (!id) {
             painel.innerText = "Selecione um tema acima para exibir os textos de apoio.";
             botao.disabled = true;
             return;
         }
 
-        const temaEncontrado = listaDeTemas.find(t => t.id == idSelecionado);
-        if (temaEncontrado) {
-            painel.innerText = temaEncontrado.textos_motivadores;
+        const tema = listaDeTemas.find(t => t.id == id);
+        if (tema) {
+            painel.innerText = tema.textos_motivadores;
             botao.disabled = false; 
         }
     }
 
-    // --- 4. CONTADOR DE LINHAS ---
     function contarLinhas() {
-        const texto = document.getElementById('texto-redacao').value;
-        const linhas = texto.split('\n').filter(linha => linha.trim().length > 0).length;
+        const txt = document.getElementById('texto-redacao').value;
+        const linhas = txt.split('\n').filter(l => l.trim().length > 0).length;
         document.getElementById('contador-linhas').innerText = `Linhas estimadas: ${linhas} / Mínimo: 7`;
     }
 
-    // --- 5. ENVIO PARA CORREÇÃO ---
     async function enviarRedacaoParaCorrigir() {
         const seletor = document.getElementById('seletor-temas');
         const tituloTema = seletor.options[seletor.selectedIndex].text;
@@ -117,42 +104,36 @@
         const botao = document.getElementById('btn-enviar-redacao');
 
         if (textoDigitado.trim().length < 150) {
-            alert("Sua redação está muito curta! Desenvolva um pouco mais os seus argumentos antes de mandar corrigir.");
+            alert("Sua redação está muito curta!");
             return;
         }
 
         botao.disabled = true;
-        botao.innerText = "🤖 OpenAI analisando suas competências... Aguarde...";
+        botao.innerText = "🤖 OpenAI analisando competências... Aguarde...";
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/redacao', {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/redacao`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    usuario_id: usuario.id,
-                    tema: tituloTema,
-                    texto: textoDigitado
-                })
+                body: JSON.stringify({ usuario_id: usuario.id, tema: tituloTema, texto: textoDigitado })
             });
 
-            const resultado = await resposta.json();
-
-            if (resposta.ok) {
-                alert(`🎉 Redação corrigida com sucesso!\nSua Nota: ${resultado.nota}/1000`);
-                window.location.href = 'perfil.html'; 
+            const res = await r.json();
+            if (r.ok) {
+                alert(`🎉 Redação corrigida com sucesso!\nSua Nota: ${res.nota}/1000`);
+                window.location.href = 'index.html'; 
             } else {
-                alert("Erro reportado pela IA: " + resultado.mensagem);
+                alert("Erro reportado: " + res.mensagem);
                 botao.disabled = false;
                 botao.innerText = "🚀 Enviar para Correção IA";
             }
-        } catch (erro) {
-            alert("Erro crítico de comunicação com o servidor.");
+        } catch (e) {
+            alert("Erro crítico de comunicação.");
             botao.disabled = false;
             botao.innerText = "🚀 Enviar para Correção IA";
         }
     }
 
-    // Inicializa a chamada automática de forma limpa
     carregarTemasDoBanco();
 </script>
 </body>

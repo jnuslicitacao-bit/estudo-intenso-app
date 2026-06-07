@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Estudo Intenso - Gerador de Simulados IA</title>
+    <script src="config.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }
         .container { max-width: 800px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
@@ -13,7 +14,6 @@
         .btn-navegacao { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
         .btn-navegacao:disabled { background: #cbd5e1; cursor: not-allowed; }
         .btn-ia { border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; background: #8a2be2; }
-        .btn-ia:hover { background: #6a1b9a; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
         select { width: 100%; padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #cbd5e1; margin-top: 8px; margin-bottom: 12px; background: white; }
         .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
@@ -45,7 +45,7 @@
         <div style="background: #f3e8ff; padding: 20px; border-radius: 6px; border: 1px solid #d8b4fe; margin-bottom: 15px;">
             <label style="font-weight: bold; color: #6b21a8;" for="busca-banca">🤖 Gerador de Provas por Inteligência Artificial</label>
             <p style="margin: 4px 0 12px 0; font-size: 13px; color: #581c87;">Digite a banca ou concurso alvo para a IA formular questões no padrão exato exigido.</p>
-            <input type="text" id="busca-banca" placeholder="Ex: Enem, EsSA, Senai RJ, FGV, Cesgranrio, FCC...">
+            <input type="text" id="busca-banca" placeholder="Ex: Enem, EsSA, Senai RJ, FGV, Cesgranrio...">
             <button id="btn-gerar-ia" class="btn-ia" style="width: 100%; padding: 12px; font-size: 16px;" onclick="iniciarSimuladoIA()">Simular Estudo de Banca Especializada</button>
         </div>
 
@@ -57,10 +57,9 @@
                 <option value="">-- Matérias Misturadas (Geral) --</option>
                 <option value="Matemática">Matemática</option>
                 <option value="História">História</option>
-                <option value="Geografia">Geografia</option>
                 <option value="Português">Português</option>
             </select>
-            <button style="width: 100%; padding: 12px; font-size: 16px; background-color: #007bff;" onclick="iniciarSimuladoTradicional()">Iniciar de Forma Tradicional</button>
+            <button style="width: 100%; padding: 12px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="iniciarSimuladoTradicional()">Iniciar de Forma Tradicional</button>
         </div>
     </div>
 
@@ -78,14 +77,14 @@
     </div>
 
     <div id="bloco-revisao-gabarito" style="display: none; margin-top: 25px;">
-        <h2 style="color: #28a745;">🏁 Simulado Concluído!</h2>
+        <h2 style="color: #28a745;">🏁 Caderno Avaliado com Sucesso!</h2>
         <div id="card-resultado-pontos" style="background: #e2e8f0; padding: 20px; border-radius: 6px; font-size: 18px; font-weight: bold; margin-bottom: 25px; text-align: center;"></div>
         
-        <h3>🔍 Espelho de Correção Dinâmica</h3>
-        <div id="container-revisao-questoes" style="display: flex; flex-direction: column; gap: 20px;"></div>
+        <h3>🔍 Espelho de Correção Pedagógica</h3>
+        <div id="container-revisao-questoes" style="display: flex; flex-direction: column; gap: 15px;"></div>
 
-        <button onclick="window.location.href='perfil.html'" style="background-color: #007bff; color: white; border: none; width: 100%; margin-top: 30px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
-            Ir para Painel de Desempenho Gráfico →
+        <button onclick="window.location.href='index.html'" style="background-color: #007bff; color: white; border: none; width: 100%; margin-top: 30px; padding: 15px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
+            Retornar ao Dashboard Central →
         </button>
     </div>
 </div>
@@ -99,15 +98,15 @@
     let respostasAluno = [];
     let modoIAAtivo = false;
 
-    // --- LÓGICA POMODORO TIMER ---
+    // --- POMODORO TIMING SYSTEM ---
     let tempoRestante = 25 * 60;
     let cronometroIntervalo = null;
     let emModoFoco = true;
 
     function atualizarDisplayTimer() {
-        const minutos = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
-        const segundos = (tempoRestante % 60).toString().padStart(2, '0');
-        document.getElementById('cronometro').innerText = `${minutos}:${segundos}`;
+        const min = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
+        const seg = (tempoRestante % 60).toString().padStart(2, '0');
+        document.getElementById('cronometro').innerText = `${min}:${seg}`;
     }
 
     function alternarTimer() {
@@ -128,59 +127,52 @@
                     clearInterval(cronometroIntervalo);
                     cronometroIntervalo = null;
                     if (emModoFoco) {
-                        alert("⏰ Bloco de foco concluído! Hora de descansar 5 minutos.");
+                        alert("⏰ Foco finalizado! Faça uma pausa de 5 minutos.");
                         emModoFoco = false;
                         tempoRestante = 5 * 60;
                         document.getElementById('tipo-timer').innerText = "Descanso";
                         document.getElementById('tipo-timer').style.color = "#28a745";
                     } else {
-                        alert("💪 Pausa terminada! Pronto para mais 25 minutos?");
+                        alert("💪 Descanso terminado! Hora de focar de novo.");
                         emModoFoco = true;
                         tempoRestante = 25 * 60;
                         document.getElementById('tipo-timer').innerText = "Focar!";
                         document.getElementById('tipo-timer').style.color = "#dc3545";
                     }
                     atualizarDisplayTimer();
-                    btn.innerText = "Iniciar Próximo";
+                    btn.innerText = "Iniciar Foco";
                     btn.style.backgroundColor = "#28a745";
                 }
             }, 1000);
         }
     }
 
-    // --- DISPARADORES DE SIMULADO ---
-
     async function iniciarSimuladoIA() {
         const bancaAlvo = document.getElementById('busca-banca').value.trim();
         const btnIa = document.getElementById('btn-gerar-ia');
-        
-        if (!bancaAlvo) {
-            alert("Por favor, digite o nome de uma banca ou concurso para pesquisar!");
-            return;
-        }
+        if (!bancaAlvo) { alert("Digite o nome da banca!"); return; }
 
         btnIa.disabled = true;
-        btnIa.innerText = "🤖 Estruturando caderno de questões via IA...";
+        btnIa.innerText = "🤖 Solicitando formulação por IA...";
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/questoes/ia', {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/questoes/ia`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ banca: bancaAlvo })
             });
-            
-            questoes = await resposta.json();
+            questoes = await r.json();
             
             if (questoes.length > 0) {
                 modoIAAtivo = true;
                 document.getElementById('titulo-simulado').innerText = `Simulado Especializado: ${bancaAlvo}`;
-                exibirPainelDeQuestoes();
+                dispararPainelProva();
             } else {
-                alert("Não foi possível gerar questões para esse termo. Tente novamente.");
+                alert("Falha ao gerar questões.");
                 resetBotaoIA();
             }
         } catch (erro) {
-            alert("Erro de conexão com o ecossistema da OpenAI.");
+            alert("Erro de conexão com o ecossistema.");
             resetBotaoIA();
         }
     }
@@ -192,35 +184,30 @@
     }
 
     async function iniciarSimuladoTradicional() {
-        const materiaSelecionada = document.getElementById('filtro-materia').value;
-        const url = materiaSelecionada 
-            ? `http://localhost:5000/api/questoes?materia=${encodeURIComponent(materiaSelecionada)}`
-            : 'http://localhost:5000/api/questoes';
+        const mat = document.getElementById('filtro-materia').value;
+        const url = mat ? `${CONFIG.URL_BACKEND}/api/questoes?materia=${encodeURIComponent(mat)}` : `${CONFIG.URL_BACKEND}/api/questoes`;
 
         try {
-            const resposta = await fetch(url);
-            questoes = await resposta.json();
-            
+            const r = await fetch(url);
+            questoes = await r.json();
             if (questoes.length > 0) {
                 modoIAAtivo = false;
                 document.getElementById('titulo-simulado').innerText = "Simulado Tradicional Local";
-                exibirPainelDeQuestoes();
+                dispararPainelProva();
             } else {
-                alert("Nenhuma questão cadastrada para essa matéria no seu banco local.");
+                alert("Nenhuma questão cadastrada para essa matéria no banco local.");
             }
         } catch (erro) {
-            alert("Erro ao conectar com o banco local.");
+            alert("Erro ao conectar ao banco local.");
         }
     }
 
-    function exibirPainelDeQuestoes() {
+    function dispararPainelProva() {
         document.getElementById('bloco-selecao-materia').style.display = 'none';
         document.getElementById('bloco-questoes-simulado').style.display = 'block';
         if (!cronometroIntervalo) alternarTimer();
         exibirQuestao();
     }
-
-    // --- CONTROLE DAS QUESTÕES ---
 
     function exibirQuestao() {
         if (questoes.length === 0) return;
@@ -229,27 +216,24 @@
         document.getElementById('materia').innerText = q.materia.toUpperCase();
         document.getElementById('enunciado').innerText = `${indexAtual + 1}. ${q.enunciado}`;
         
-        const divAlternativas = document.getElementById('alternativas-questao');
-        divAlternativas.innerHTML = '';
+        const divAlt = document.getElementById('alternativas-questao');
+        divAlt.innerHTML = '';
         
         document.getElementById('btn-proxima').disabled = true;
-        document.getElementById('btn-proxima').innerText = (indexAtual === questoes.length - 1) 
-            ? "Finalizar Caderno de Prova 🏁" 
-            : "Confirmar Resposta & Avançar →";
+        document.getElementById('btn-proxima').innerText = (indexAtual === questoes.length - 1) ? "Finalizar Caderno de Prova 🏁" : "Confirmar Resposta & Avançar →";
 
         Object.keys(q.opcoes).forEach(letra => {
             const btn = document.createElement('button');
             btn.className = 'btn-opcao';
             btn.innerText = `${letra}) ${q.opcoes[letra]}`;
             btn.onclick = () => selecionarOpcao(letra, btn);
-            divAlternativas.appendChild(btn);
+            divAlt.appendChild(btn);
         });
     }
 
     function selecionarOpcao(letra, botaoClicado) {
         respostasAluno[indexAtual] = letra;
-        const botoes = document.querySelectorAll('.btn-opcao');
-        botoes.forEach(b => b.classList.remove('selecionada'));
+        document.querySelectorAll('.btn-opcao').forEach(b => b.classList.remove('selecionada'));
         botaoClicado.classList.add('selecionada');
         document.getElementById('btn-proxima').disabled = false;
     }
@@ -259,17 +243,15 @@
         if (indexAtual < questoes.length) {
             exibirQuestao();
         } else {
-            // --- CÁLCULO FINAL DA NOTA ---
             let acertos = 0;
             questoes.forEach((q, i) => {
-                const gabaritoCorreto = modoIAAtivo ? q.correta : 'A';
-                if (respostasAluno[i] === gabaritoCorreto) { acertos++; }
+                const gabarito = modoIAAtivo ? q.correta : 'A';
+                if (respostasAluno[i] === gabarito) acertos++;
             });
 
             const notaPorcentagem = Math.round((acertos / questoes.length) * 100);
 
-            // Sincroniza nota com o banco
-            fetch('http://localhost:5000/api/simulado/salvar', {
+            fetch(`${CONFIG.URL_BACKEND}/api/simulado/salvar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -279,73 +261,68 @@
                 })
             });
 
-            // Transiciona painéis da interface
             document.getElementById('bloco-questoes-simulado').style.display = 'none';
             document.getElementById('bloco-revisao-gabarito').style.display = 'block';
-            if (cronometroIntervalo) alternarTimer();
+            if (cronometroIntervalo) clearInterval(cronometroIntervalo);
 
             document.getElementById('card-resultado-pontos').innerText = `Você acertou ${acertos} de ${questoes.length} questões (${notaPorcentagem}%)`;
 
-            const containerRevisao = document.getElementById('container-revisao-questoes');
-            containerRevisao.innerHTML = '';
+            const container = document.getElementById('container-revisao-questoes');
+            container.innerHTML = '';
 
             questoes.forEach((q, i) => {
-                const gabaritoCorreto = modoIAAtivo ? q.correta : 'A';
-                const escolheuCerto = respostasAluno[i] === gabaritoCorreto;
+                const gabarito = modoIAAtivo ? q.correta : 'A';
+                const escolheuCerto = respostasAluno[i] === gabarito;
                 
-                const boxQuestao = document.createElement('div');
-                boxQuestao.style.cssText = `padding: 15px; border-radius: 6px; border: 1px solid ${escolheuCerto ? '#badbcc' : '#f5c2c7'}; background: ${escolheuCerto ? '#d1e7dd' : '#f8d7da'}; color: #222; margin-bottom: 10px;`;
+                const box = document.createElement('div');
+                box.style.cssText = `padding: 15px; border-radius: 6px; border: 1px solid ${escolheuCerto ? '#badbcc' : '#f5c2c7'}; background: ${escolheuCerto ? '#d1e7dd' : '#f8d7da'}; margin-bottom: 10px; color: #222;`;
                 
-                boxQuestao.innerHTML = `
+                box.innerHTML = `
                     <strong>Questão ${i + 1} (${q.materia}):</strong>
                     <p style="margin: 8px 0;">${q.enunciado}</p>
                     <div style="font-size: 14px; margin-bottom: 10px;">
-                        <span style="color: #155724;">✔️ Gabarito: <strong>${gabaritoCorreto}</strong></span> | 
-                        <span style="color: ${escolheuCerto ? '#155724' : '#721c24'};">👤 Sua Resposta: <strong>${respostasAluno[i]}</strong></span>
+                        <span style="color: #155724;">✔️ Gabarito: <strong>${gabarito}</strong></span> | 
+                        <span style="color: ${escolheuCerto ? '#155724' : '#721c24'};">👤 Sua Cópia: <strong>${respostasAluno[i]}</strong></span>
                     </div>
-                    <button class="btn-ia" style="padding: 6px 12px; border: none; border-radius:4px; color:white; cursor:pointer;" onclick="solicitarComentarioIA(${i}, this)">
-                        💡 Explicar Alternativa com IA
-                    </button>
+                    <button class="btn-ia" onclick="solicitarComentarioIA(${i}, this)">💡 Explicar Alternativa com IA</button>
                     <p id="comentario-ia-${i}" style="margin-top: 10px; font-size: 14px; display: none; font-style: italic; background: white; padding: 10px; border-radius: 4px; border: 1px solid #ddd; color: #444; line-height: 1.5;"></p>
                 `;
-                containerRevisao.appendChild(boxQuestao);
+                container.appendChild(box);
             });
         }
     }
 
     async function solicitarComentarioIA(index, botao) {
         const q = questoes[index];
-        const gabaritoCorreto = modoIAAtivo ? q.correta : 'A';
-        const campoTexto = document.getElementById(`comentario-ia-${index}`);
+        const gabarito = modoIAAtivo ? q.correta : 'A';
+        const campo = document.getElementById(`comentario-ia-${index}`);
         botao.disabled = true;
         botao.innerText = "🤖 Professor IA analisando...";
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/gabarito/comentar', {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/gabarito/comentar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     enunciado: q.enunciado,
                     opcoes: q.opcoes,
                     resposta_aluno: respostasAluno[index],
-                    resposta_correta: gabaritoCorreto
+                    resposta_correta: gabarito
                 })
             });
-            
-            const dados = await resposta.json();
-            if (resposta.ok) {
-                campoTexto.style.display = "block";
-                campoTexto.innerHTML = `<strong>Análise do Tutor:</strong> ${dados.comentario}`;
+            const dados = await r.json();
+            if (r.ok) {
+                campo.style.display = "block";
+                campo.innerHTML = `<strong>Análise do Tutor:</strong> ${dados.comentario}`;
                 botao.style.display = "none";
             } else {
-                alert("Erro ao processar insight.");
+                alert("Erro ao processar.");
                 botao.disabled = false;
                 botao.innerText = "💡 Explicar Alternativa com IA";
             }
-        } catch (erro) {
-            alert("Erro de conexão.");
+        } catch (e) {
+            alert("Erro de rede.");
             botao.disabled = false;
-            botao.innerText = "💡 Explicar Alternativa com IA";
         }
     }
 </script>

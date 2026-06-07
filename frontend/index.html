@@ -2,43 +2,55 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Dashboard</title>
+    <title>Estudo Intenso - Dashboard Inteligente</title>
+    <script src="config.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
-        .container { max-width: 850px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
-        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 25px; }
-        .card { padding: 20px; text-align: center; background: #e9ecef; border-radius: 6px; text-decoration: none; color: #333; font-weight: bold; font-size: 16px; border: 1px solid #cbd5e1; transition: 0.2s; }
-        .card:hover { background: #cbd5e1; transform: translateY(-2px); }
-        .status-box { padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; }
-        .atualizado { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .desatualizado { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .btn-sync { background: #0d6efd; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
-        .insight-box { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 14px; }
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header-painel { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px; }
+        .grid-atalhos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .card-modulo { padding: 25px; border-radius: 6px; border: 1px solid #cbd5e1; text-decoration: none; color: #333; transition: 0.2s; background: #fff; }
+        .card-modulo:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .status-box { padding: 15px; border-radius: 6px; font-weight: bold; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .status-atualizado { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .status-desatualizado { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .btn-update { background: #dc3545; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-update:hover { background: #b02a37; }
+        .btn-update:disabled { background: #cbd5e1; cursor: not-allowed; color: #64748b; }
+        .insight-card { background: #eff6ff; border-left: 5px solid #3b82f6; padding: 20px; border-radius: 0 6px 6px 0; font-style: italic; color: #1e3a8a; line-height: 1.5; }
+        .btn-logout { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Plataforma Estudo Intenso</h2>
-        <button onclick="logout()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Sair</button>
-    </div>
-    <p>Bem-vindo, <span id="nome-usuario" style="color:#007bff; font-weight:bold;">Estudante</span>!</p>
-
-    <div id="barra-status" class="status-box desatualizado">
-        <span id="texto-status">Verificando integridade do sistema...</span>
-        <button id="btn-atualizar" class="btn-sync" onclick="forcarAtualizacao()">🔄 Atualizar Conteúdos</button>
+    <div class="header-painel">
+        <div>
+            <h1 style="margin: 0;" id="boas-vindas">Bem-vindo à Plataforma!</h1>
+            <p style="margin: 5px 0 0 0; color: #64748b;">Acelere sua aprovação com engenharia e inteligência adaptativa.</p>
+        </div>
+        <button class="btn-logout" onclick="fazerLogout()">Sair da Conta 🚪</button>
     </div>
 
-    <div class="insight-box">
-        <strong>🧠 Insight Direcionado por IA:</strong>
-        <p id="txt-insight" style="margin: 5px 0 0 0; font-style: italic;">Analisando seu padrão de estudos...</p>
+    <div id="barra-status" class="status-box status-atualizado">
+        <span id="texto-status">🔍 Checando integridade e sincronismo das matérias...</span>
+        <button id="btn-sincronizar" class="btn-update" onclick="forcarAtualizacaoSistema()" disabled>🔄 Atualizar Conteúdos</button>
     </div>
 
-    <div class="menu-grid">
-        <a href="simulado.html" class="card" style="border-top: 5px solid #28a745;">📝 Treinar Simulados</a>
-        <a href="redacao.html" class="card" style="border-top: 5px solid #ffc107;">✍️ Laboratório de Redação</a>
-        <a href="perfil.html" class="card" style="border-top: 5px solid #007bff;">📊 Ver Desempenho</a>
+    <div class="grid-atalhos">
+        <a href="simulado.html" class="card-modulo" style="border-left: 5px solid #8a2be2;">
+            <h3 style="margin-top:0; color: #8a2be2;">📝 Gerador de Simulados por IA</h3>
+            <p style="margin: 0; color: #64748b; font-size: 14px;">Treine com questões simuladas por bancas de concurso ou monte cadernos tradicionais locais.</p>
+        </a>
+        <a href="redacao.html" class="card-modulo" style="border-left: 5px solid #ffc107;">
+            <h3 style="margin-top:0; color: #b08400;">✍️ Laboratório de Redação Dissertativa</h3>
+            <p style="margin: 0; color: #64748b; font-size: 14px;">Envie redações dissertativas argumentativas e receba uma correção instantânea no padrão do ENEM.</p>
+        </a>
+    </div>
+
+    <h3>🧠 Insight Preditivo do Professor IA</h3>
+    <div id="painel-insight" class="insight-card">
+        Analisando seu padrão de estudos recente... Aguarde...
     </div>
 </div>
 
@@ -46,58 +58,72 @@
     const dadosUsuario = localStorage.getItem('usuario_estudo');
     if (!dadosUsuario) { window.location.href = 'login.html'; }
     const usuario = JSON.parse(dadosUsuario);
-    document.getElementById('nome-usuario').innerText = usuario.nome;
+    
+    document.getElementById('boas-vindas').innerText = `Olá, ${usuario.nome}! 👋`;
 
-    async function checarStatusSistema() {
+    async function checarStatusDoSistema() {
         try {
-            const r = await fetch('http://localhost:5000/api/sistema/status');
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/status`);
             const dados = await r.json();
+            
             const barra = document.getElementById('barra-status');
             const texto = document.getElementById('texto-status');
-            
-            if (dados.status === "atualizado") {
-                barra.className = "status-box atualizado";
-                texto.innerText = `✅ Sistema Otimizado (Última sincronização: ${dados.ultima})`;
-                document.getElementById('btn-atualizar').style.display = "none";
-            } else {
-                barra.className = "status-box desatualizado";
-                texto.innerText = `⚠️ Conteúdos defasados. Atualize para receber novas questões baseadas no mercado.`;
-                document.getElementById('btn-atualizar').style.display = "block";
-            }
-        } catch(e) { console.error(e); }
-    }
+            const botao = document.getElementById('btn-sincronizar');
 
-    async function forcarAtualizacao() {
-        const btn = document.getElementById('btn-atualizar');
-        btn.disabled = true;
-        btn.innerText = "Sincronizando Banco via IA...";
-        
-        const r = await fetch('http://localhost:5000/api/sistema/atualizar', { method: 'POST' });
-        if(r.ok) {
-            alert("Banco de dados atualizado com novas propostas e simulados adaptativos!");
-            checarStatusSistema();
-        } else {
-            alert("Erro ao atualizar.");
-            btn.disabled = false;
-            btn.innerText = "🔄 Atualizar Conteúdos";
+            if (dados.status === "desatualizado") {
+                barra.className = "status-box status-desatualizado";
+                texto.innerHTML = `⚠️ <strong>Aviso do Sistema:</strong> O banco geral expirou (Última carga: ${dados.ultima}). Há novos conteúdos de IA esperando!`;
+                botao.disabled = false;
+            } else {
+                barra.className = "status-box status-atualizado";
+                texto.innerHTML = `✅ <strong>Sistema Otimizado:</strong> Seus pacotes de matérias estão totalmente atualizados (Validade: 2 dias).`;
+                botao.disabled = true;
+            }
+        } catch (e) {
+            console.error("Erro de conexão.", e);
         }
     }
 
-    async function carregarInsights() {
+    async function forcarAtualizacaoSistema() {
+        const botao = document.getElementById('btn-sincronizar');
+        botao.disabled = true;
+        botao.innerText = "🤖 OpenAI alimentando o banco...";
+
         try {
-            const r = await fetch(`http://localhost:5000/api/insights?usuario_id=${usuario.id}`);
-            const dados = await r.json();
-            document.getElementById('txt-insight').innerText = dados.insight;
-        } catch(e) { console.error(e); }
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/atualizar`, { method: 'POST' });
+            if (r.ok) {
+                alert("🎉 Banco de dados atualizado com sucesso via IA!");
+                checarStatusDoSistema();
+            } else {
+                alert("Falha ao injetar novos dados.");
+                botao.disabled = false;
+                botao.innerText = "🔄 Atualizar Conteúdos";
+            }
+        } catch (e) {
+            alert("Erro crítico ao acionar o ecossistema do servidor.");
+            botao.disabled = false;
+            botao.innerText = "🔄 Atualizar Conteúdos";
+        }
     }
 
-    function logout() {
+    async function carregarInsightsDoEstudante() {
+        try {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/insights?usuario_id=${usuario.id}`);
+            const dados = await r.json();
+            document.getElementById('painel-insight').innerText = dados.insight;
+        } catch (e) {
+            document.getElementById('painel-insight').innerText = "Não foi possível carregar a análise de IA agora.";
+        }
+    }
+
+    function fazerLogout() {
         localStorage.removeItem('usuario_estudo');
         window.location.href = 'login.html';
     }
 
-    checarStatusSistema();
-    carregarInsights();
+    // Inicialização do painel
+    checarStatusDoSistema();
+    carregarInsightsDoEstudante();
 </script>
 </body>
 </html>
