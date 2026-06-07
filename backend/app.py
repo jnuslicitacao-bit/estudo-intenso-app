@@ -488,6 +488,47 @@ def obter_insights():
     except Exception as e:
         return jsonify({"insight": "Análise indisponível no momento."}), 200
 
+@app.route('/api/gabarito/comentar', methods=['POST'])
+def comentar_questao_ia():
+    """Recebe uma questão e gera uma explicação pedagógica personalizada sobre o erro ou acerto"""
+    dados = request.get_json()
+    enunciado = dados.get('enunciado')
+    opcoes = dados.get('opcoes')
+    resposta_aluno = dados.get('resposta_aluno')
+    resposta_correta = dados.get('resposta_correta')
+
+    if not enunciado or not resposta_correta:
+        return jsonify({"status": "erro", "mensagem": "Dados incompletos para gerar comentário."}), 400
+
+    prompt_sistema = "Você é um professor tutor altamente didático focado em sanar dúvidas de alunos para vestibulares e concursos."
+    
+    prompt_usuario = f"""
+    O aluno respondeu a seguinte questão:
+    Enunciado: {enunciado}
+    Alternativas disponíveis: {json.dumps(opcoes, ensure_ascii=False)}
+    
+    O aluno marcou a alternativa: {resposta_aluno}
+    O gabarito correto é a alternativa: {resposta_correta}
+    
+    Dê uma explicação cirúrgica, em no máximo 4 linhas, explicando por que a alternativa {resposta_correta} está correta e por que a resposta do aluno faz sentido ou onde ele se confundiu (caso ele tenha errado). Seja direto e use tom encorajador.
+    """
+
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.5
+        )
+        
+        comentario_ia = resposta.choices[0].message.content.strip()
+        return jsonify({"status": "sucesso", "comentario": comentario_ia}), 200
+
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 if __name__ == '__main__':
     # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
     app.run(debug=False, port=5000)
