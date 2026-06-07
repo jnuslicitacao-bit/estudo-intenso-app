@@ -239,6 +239,28 @@ def obter_desempenho():
         })
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+    
+@app.route('/api/temas', methods=['GET'])
+def obter_temas():
+    """Busca a lista de temas de redação cadastrados com seus textos motivadores"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
+        temas_banco = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        lista_temas = []
+        for t in temas_banco:
+            lista_temas.append({
+                "id": t[0],
+                "titulo": t[1],
+                "textos_motivadores": t[2]
+            })
+        return jsonify(lista_temas), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 if __name__ == '__main__':
     # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
