@@ -3,230 +3,326 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo Intenso - Inteligência Educacional</title>
+    <title>Estudo Intensivo - Painel de Alta Performance</title>
     <script src="config.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-global: #f8fafc;
+            --primary-light: #eff6ff;
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --bg-global: #f1f5f9;
             --card-bg: #ffffff;
+            --border-color: #e2e8f0;
             --success: #10b981;
-            --success-bg: #ecfdf5;
-            --danger: #ef4444;
-            --danger-bg: #fef2f2;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            padding: 40px 20px;
-            background-color: var(--bg-global); 
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-global);
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
         }
 
-        .container { 
-            max-width: 950px; 
-            margin: auto; 
-            background: var(--card-bg); 
-            padding: 40px; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        /* BARRA SUPERIOR DE STATUS */
+        .top-sync-bar {
+            background-color: #ecfdf5;
+            border-bottom: 1px solid #a7f3d0;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #065f46;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-update-top {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .btn-update-top:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
         }
 
-        .header-painel { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border-bottom: 1px solid #e2e8f0; 
-            padding-bottom: 25px; 
-            margin-bottom: 30px; 
+        /* HEADER & NAVBAR */
+        header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        .nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .user-profile-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
         }
 
-        .header-painel h1 {
+        /* LAYOUT PRINCIPAL */
+        .wrapper {
+            max-width: 1300px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 2.5fr 1fr;
+            gap: 25px;
+        }
+
+        /* BANNER INSTITUCIONAL */
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(79, 70, 229, 0.9) 100%), 
+                        url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            border-radius: 16px;
+            padding: 40px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .hero-banner h2 {
+            margin: 0 0 10px 0;
             font-size: 28px;
             font-weight: 700;
+        }
+        .hero-banner p {
             margin: 0;
-            letter-spacing: -0.5px;
+            font-size: 16px;
+            opacity: 0.9;
+            line-height: 1.6;
+            max-width: 600px;
+            font-weight: 300;
+        }
+        .hero-highlight {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #67e8f9;
+            margin-top: 15px;
+            font-size: 13px;
+            text-transform: uppercase;
         }
 
-        .status-box { 
-            padding: 16px 20px; 
-            border-radius: 12px; 
-            font-size: 15px;
-            font-weight: 500; 
-            margin-bottom: 30px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            transition: all 0.3s ease;
+        /* GRID DE MÓDULOS DE ESTUDO */
+        .grid-modulos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
-
-        .status-atualizado { 
-            background-color: var(--success-bg); 
-            color: #065f46; 
-            border: 1px solid #a7f3d0; 
+        .card-home {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 25px;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
-
-        .status-desatualizado { 
-            background-color: var(--danger-bg); 
-            color: #991b1b; 
-            border: 1px solid #fca5a5; 
-        }
-
-        .btn-update { 
-            background: var(--danger); 
-            color: white; 
-            border: none; 
-            padding: 10px 18px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            font-size: 14px;
-            transition: background 0.2s ease, transform 0.1s ease;
-            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-update:hover { background: #dc2626; transform: translateY(-1px); }
-        .btn-update:active { transform: translateY(0); }
-        .btn-update:disabled { 
-            background: #cbd5e1; 
-            cursor: not-allowed; 
-            color: #94a3b8;
-            box-shadow: none;
-            transform: none;
-        }
-
-        .grid-atalhos { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 25px; 
-            margin-bottom: 35px; 
-        }
-
-        .card-modulo { 
-            padding: 30px; 
-            border-radius: 14px; 
-            border: 1px solid #e2e8f0; 
-            text-decoration: none; 
-            color: var(--text-main); 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-            background: #fff;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-modulo::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 6px; height: 100%;
-        }
-
-        .card-modulo.simulados::before { background: #8b5cf6; }
-        .card-modulo.redacao::before { background: #f59e0b; }
-
-        .card-modulo:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.1);
+        .card-home:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08);
             border-color: #cbd5e1;
         }
-
-        .card-modulo h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
+        .card-home h4 {
+            margin: 0 0 10px 0;
             font-size: 18px;
             font-weight: 600;
         }
+        .card-home.simulados h4 { color: var(--primary); }
+        .card-home.redacao h4 { color: #b45309; }
+        .card-home p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
 
-        .card-modulo.simulados h3 { color: #6d28d9; }
-        .card-modulo.redacao h3 { color: #b45309; }
-
-        .section-title {
+        /* COLUNA LATERAL - RESULTADOS */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .widget-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
+        .widget-box h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-muted);
-            margin-bottom: 15px;
+        }
+        .resultado-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .resultado-item:last-child { border: none; }
+        .materia-nome { font-weight: 500; font-size: 15px; }
+        .nota-badge {
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* SEÇÃO INFERIOR - INSIGHTS IA */
+        .footer-insight {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 5px solid var(--primary);
+            padding: 20px 30px;
+            border-radius: 4px 12px 12px 4px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 15px;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
         }
 
-        .insight-card { 
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
-            border-left: 5px solid #2563eb; 
-            padding: 24px; 
-            border-radius: 4px 12px 12px 4px; 
-            font-size: 15px;
-            font-style: italic; 
-            color: #1e40af; 
-            line-height: 1.6; 
-            box-shadow: inset 0 1px 2px rgba(255,255,255,0.6);
-        }
-
-        .btn-logout { 
-            background: transparent; 
-            color: var(--text-muted); 
-            border: 1px solid #cbd5e1; 
-            padding: 8px 16px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 14px;
+        /* CONTROLE DE LOGOUT INTERNO */
+        .btn-logout-footer {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
             font-weight: 500;
-            transition: all 0.2s ease;
+            font-size: 14px;
         }
-
-        .btn-logout:hover { 
-            background: #f1f5f9; 
-            color: var(--text-main);
-            border-color: #94a3b8;
-        }
+        .btn-logout-footer:hover { color: #ef4444; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header-painel">
-        <div>
-            <h1 id="boas-vindas">Olá! 👋</h1>
-            <p style="margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px;">Acelere sua aprovação com engenharia e inteligência adaptativa.</p>
+    <div id="barra-status" class="top-sync-bar">
+        <span id="texto-status">🔍 Sincronizando dados com o servidor...</span>
+        <button id="btn-sincronizar" class="btn-update-top" onclick="forcarAtualizacaoSistema()" disabled>🔄 Atualizar Conteúdos</button>
+    </div>
+
+    <header>
+        <div class="logo-area">
+            🎓 <span>Estudo Intensivo</span>
         </div>
-        <button class="btn-logout" onclick="fazerLogout()">Sair da Conta 🚪</button>
-    </div>
+        <nav class="nav-links">
+            <a href="index.html" class="nav-item active">Painel</a>
+            <a href="simulado.html" class="nav-item">Simulados</a>
+            <a href="redacao.html" class="nav-item">Redação</a>
+            <a href="#" class="nav-item" onclick="alert('Funcionalidade de Histórico Gráfico em desenvolvimento!')">Progresso</a>
+        </nav>
+        <div class="user-profile-top">
+            👤 <span id="nome-perfil-top">Estudante</span>
+        </div>
+    </header>
 
-    <div id="barra-status" class="status-box status-atualizado">
-        <span id="texto-status">🔍 Checando integridade e sincronismo das matérias...</span>
-        <button id="btn-sincronizar" class="btn-update" onclick="forcarAtualizacaoSistema()" disabled>🔄 Atualizar Conteúdos</button>
-    </div>
+    <main class="wrapper">
+        
+        <section>
+            <div class="hero-banner">
+                <h2>Estudo Intensivo: Seu Caminho para a Aprovação</h2>
+                <p>Monitore sua evolução através de engenharia pedagógica adaptativa. Nossos algoritmos geram cadernos customizados para otimizar o seu tempo de absorção.</p>
+                <div class="hero-highlight">⚡ O Melhor Acompanhamento • Inteligência • Tecnologia</div>
+            </div>
 
-    <div class="grid-atalhos">
-        <a href="simulado.html" class="card-modulo simulados">
-            <h3>📝 Gerador de Simulados por IA</h3>
-            <p style="margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.5;">Treine com questões simuladas por bancas de concurso ou monte cadernos tradicionais locais de estudo.</p>
-        </a>
-        <a href="redacao.html" class="card-modulo redacao">
-            <h3>✍️ Laboratório de Redação Dissertativa</h3>
-            <p style="margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.5;">Envie redações dissertativas argumentativas e receba uma correção instantânea no padrão oficial do ENEM.</p>
-        </a>
-    </div>
+            <div class="grid-modulos">
+                <a href="simulado.html" class="card-home simulados">
+                    <h4>📝 Cadernos de Simulado Adaptativo</h4>
+                    <p>Gere exames baseados nos editais de grandes bancas com o suporte do Gabarito Comentado por IA pós-prova.</p>
+                </a>
+                <a href="redacao.html" class="card-home redacao">
+                    <h4>✍️ Laboratório de Redação Nota 1000</h4>
+                    <p>Submeta seu texto argumentativo e receba imediatamente a correção detalhada por competências no padrão ENEM.</p>
+                </a>
+            </div>
+        </section>
 
-    <div class="section-title">🧠 Insight Preditivo do Professor IA</div>
-    <div id="painel-insight" class="insight-card">
-        Analisando seu padrão de estudos recente... Aguarde...
-    </div>
-</div>
+        <aside class="sidebar">
+            <div class="widget-box">
+                <h3>📊 Últimos Desempenhos</h3>
+                <div id="lista-resultados-locais">
+                    <div class="resultado-item">
+                        <span class="materia-nome">Geral (Padrão)</span>
+                        <span class="nota-badge">--</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; padding: 10px;">
+                <button class="btn-logout-footer" onclick="fazerLogout()">Sair do Sistema 🚪</button>
+            </div>
+        </aside>
+
+        <footer class="footer-insight">
+            <div style="font-size: 24px;">💡</div>
+            <div>
+                <strong style="color: #1e40af; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Insight Preditivo do Professor IA</strong>
+                <span id="painel-insight" style="color: #1e3a8a; font-size: 15px; font-style: italic;">Analisando suas métricas recentes...</span>
+            </div>
+        </footer>
+
+    </main>
 
 <script>
+    // --- SEGURANÇA E SESSÃO ---
     const dadosUsuario = localStorage.getItem('usuario_estudo');
     if (!dadosUsuario) { window.location.href = 'login.html'; }
     const usuario = JSON.parse(dadosUsuario);
     
-    document.getElementById('boas-vindas').innerText = `Olá, ${usuario.nome}! 👋`;
+    // Atualiza nome na interface
+    document.getElementById('nome-perfil-top').innerText = `Olá, ${usuario.nome}! 👋`;
 
+    // --- LOGICA DE ATUALIZAÇÃO DO BANCO (2 DIAS) ---
     async function checarStatusDoSistema() {
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/status`);
@@ -237,48 +333,53 @@
             const botao = document.getElementById('btn-sincronizar');
 
             if (dados.status === "desatualizado") {
-                barra.className = "status-box status-desatualizado";
-                texto.innerHTML = `⚠️ <strong>Aviso do Sistema:</strong> O banco geral expirou (Última carga: ${dados.ultima}). Há novos conteúdos de IA esperando!`;
+                barra.style.backgroundColor = "#fef2f2";
+                barra.style.borderColor = "#fca5a5";
+                barra.style.color = "#991b1b";
+                texto.innerHTML = `⚠️ <strong>Aviso:</strong> Seus pacotes de matérias locais expiraram. Há novidades da inteligência de dados prontas para carregar!`;
                 botao.disabled = false;
             } else {
-                barra.className = "status-box status-atualizado";
-                texto.innerHTML = `✅ <strong>Sistema Otimizado:</strong> Seus pacotes de matérias estão totalmente atualizados (Validade: 2 dias).`;
+                barra.style.backgroundColor = "#ecfdf5";
+                barra.style.borderColor = "#a7f3d0";
+                barra.style.color = "#065f46";
+                texto.innerHTML = `✅ <strong>Sistema Sincronizado:</strong> Inteligência e tecnologia rodando na última versão estável.`;
                 botao.disabled = true;
             }
         } catch (e) {
-            console.error("Erro de conexão.", e);
+            console.error("Erro ao verificar integridade do sistema.", e);
         }
     }
 
     async function forcarAtualizacaoSistema() {
         const botao = document.getElementById('btn-sincronizar');
         botao.disabled = true;
-        botao.innerText = "🤖 OpenAI alimentando o banco...";
+        botao.innerText = "Carregando novos pacotes...";
 
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/atualizar`, { method: 'POST' });
             if (r.ok) {
-                alert("🎉 Banco de dados atualizado com sucesso via IA!");
+                alert("🎉 Banco de dados atualizado com sucesso!");
                 checarStatusDoSistema();
             } else {
-                alert("Falha ao injetar novos dados.");
+                alert("Falha no sincronismo secundário.");
                 botao.disabled = false;
                 botao.innerText = "🔄 Atualizar Conteúdos";
             }
         } catch (e) {
-            alert("Erro crítico ao acionar o ecossistema do servidor.");
+            alert("Erro crítico ao acionar ecossistema de rede.");
             botao.disabled = false;
             botao.innerText = "🔄 Atualizar Conteúdos";
         }
     }
 
+    // --- CARREGAMENTO DE INSIGHTS DA IA ---
     async function carregarInsightsDoEstudante() {
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/insights?usuario_id=${usuario.id}`);
             const dados = await r.json();
             document.getElementById('painel-insight').innerText = dados.insight;
         } catch (e) {
-            document.getElementById('painel-insight').innerText = "Realize o seu primeiro simulado para a inteligência ativa analisar os seus pontos fracos!";
+            document.getElementById('painel-insight').innerText = "Faça seu primeiro simulado para habilitar o tutor inteligente!";
         }
     }
 
@@ -287,7 +388,7 @@
         window.location.href = 'login.html';
     }
 
-    // Inicialização do painel
+    // Inicialização da página
     checarStatusDoSistema();
     carregarInsightsDoEstudante();
 </script>
