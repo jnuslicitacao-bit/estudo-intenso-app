@@ -2,53 +2,111 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Redação</title>
+    <title>Estudo Intenso - Redação Inteligente</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
-        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 200px; margin-top: 10px; margin-bottom: 10px; }
-        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
-        .resultado { margin-top: 20px; padding: 15px; background: #e2f0d9; display: none; border-radius: 4px; }
+        .container { max-width: 900px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
+        .layout-redacao { display: flex; gap: 20px; margin-top: 20px; }
+        .painel-apoio { flex: 1; background: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .painel-escrita { flex: 1.2; display: flex; flex-direction: column; gap: 15px; }
+        select { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 16px; margin-bottom: 10px; background-color: #fff; }
+        textarea { width: 100%; height: 350px; padding: 15px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 15px; font-family: 'Courier New', Courier, monospace; resize: none; box-sizing: border-box; line-height: 1.6; }
+        .btn-enviar { background-color: #ffc107; color: #212529; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
+        .btn-enviar:hover { background-color: #e0a800; }
+        .btn-enviar:disabled { background-color: #cbd5e1; cursor: not-allowed; color: #64748b; }
+        .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .motivadores-box { font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap; margin-top: 10px; background: white; padding: 15px; border-radius: 4px; border: 1px solid #edf2f7; max-height: 250px; overflow-y: auto; }
+        .contador { text-align: right; font-size: 13px; color: #64748b; margin-top: -5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Módulo de Redação Dissertativa</h2>
-    <label>Tema da Redação:</label>
-    <input type="text" id="tema" value="O impacto da Inteligência Artificial na educação brasileira" style="width: 100%;">
-    
-    <label><br>Escreva seu texto abaixo:</label>
-    <textarea id="textoRedacao" placeholder="Comece sua introdução aqui..."></textarea>
-    
-    <button onclick="enviarRedacao()">Enviar para Correção Inteligente</button>
+    <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
+    <h2>Laboratório de Redação Dissertativa</h2>
+    <p>Selecione um tema oficial, leia o material de apoio e receba uma correção instantânea por Inteligência Artificial no padrão do ENEM.</p>
 
-    <div id="resultadoBloco" class="resultado">
-        <h3>Resultado da Correção:</h3>
-        <p><strong>Nota:</strong> <span id="notaIa"></span>/1000</p>
-        <p><strong>Análise:</strong> <span id="feedbackIa"></span></p>
+    <label style="font-weight: bold; color: #334155;" for="seletor-temas">Escolha a Proposta de Redação:</label>
+    <select id="seletor-temas" onchange="atualizarTextosMotivadores()">
+        <option value="">Carregando temas disponíveis...</option>
+    </select>
+
+    <div class="layout-redacao">
+        <div class="painel-apoio">
+            <h4 style="margin-top: 0; color: #007bff;">📖 Textos Motivadores</h4>
+            <div id="textos-motivadores" class="motivadores-box">
+                Selecione um tema acima para exibir os textos de apoio.
+            </div>
+        </div>
+
+        <div class="painel-escrita">
+            <textarea id="texto-redacao" placeholder="Desenvolva aqui seu texto argumentativo. Lembre-se de estruturar em Introdução, Desenvolvimento e Proposta de Intervenção..." oninput="contarLinhas()"></textarea>
+            <div id="contador-linhas" class="contador">Linhas estimadas: 0 / Mínimo: 7</div>
+            
+            <button id="btn-enviar-redacao" class="btn-enviar" onclick="enviarRedacaoParaCorrigir()" disabled>
+                🚀 Enviar para Correção IA
+            </button>
+        </div>
     </div>
 </div>
 
 <script>
-    async function enviarRedacao() {
-        const tema = document.getElementById('tema').value;
-        const texto = document.getElementById('textoRedacao').value;
-
-        // Envia os dados para o servidor Python
-        const resposta = await fetch('http://localhost:5000/api/redacao', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tema: tema, texto: texto })
-        });
-
-        const resultado = await reply = await resposta.json();
-        
-        // Exibe o resultado na tela
-        document.getElementById('resultadoBloco').style.display = 'block';
-        document.getElementById('notaIa').innerText = resultado.nota;
-        document.getElementById('feedbackIa').innerText = resultado.feedback;
+    // --- TRAVA DE SEGURANÇA ---
+    const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
+    if (!dadosUsuario) {
+        alert("Acesso negado! Por favor, faça login primeiro.");
+        window.location.href = 'login.html';
     }
-</script>
-</body>
-</html>
+
+    let listaDeTemas = [];
+
+    // --- CARREGAMENTO INICIAL DOS TEMAS ---
+    async function carregarTemasDoBanco() {
+        try {
+            const resposta = await fetch('http://localhost:5000/api/temas');
+            listaDeTemas = await resposta.json();
+            
+            const seletor = document.getElementById('seletor-temas');
+            seletor.innerHTML = '<option value="">-- Clique aqui para selecionar --</option>';
+            
+            listaDeTemas.forEach(tema => {
+                seletor.innerHTML += `<option value="${tema.id}">${tema.titulo}</option>`;
+            });
+        } catch (erro) {
+            console.error("Erro ao buscar temas:", erro);
+            document.getElementById('seletor-temas').innerHTML = '<option value="">Erro ao carregar temas do servidor.</option>';
+        }
+    }
+
+    // --- ATUALIZA TEXTO DE APOIO AO MUDAR O SELECT ---
+    function atualizarTextosMotivadores() {
+        const idSelecionado = document.getElementById('seletor-temas').value;
+        const painel = document.getElementById('textos-motivadores');
+        const botao = document.getElementById('btn-enviar-redacao');
+        
+        if (!idSelecionado) {
+            painel.innerText = "Selecione um tema acima para exibir os textos de apoio.";
+            botao.disabled = true;
+            return;
+        }
+
+        const temaEncontrado = listaDeTemas.find(t => t.id == idSelecionado);
+        if (temaEncontrado) {
+            painel.innerText = temaEncontrado.textos_motivadores;
+            botao.disabled = false; // Libera o botão de envio
+        }
+    }
+
+    // --- CONTADOR DE LINHAS PEDAGÓGICO ---
+    function contarLinhas() {
+        const texto = document.getElementById('texto-redacao').value;
+        // Divide o texto quebrando por quebras de linha e limpa linhas vazias
+        const linhas = texto.split('\n').filter(linha => linha.trim().length > 0).length;
+        document.getElementById('contador-linhas').innerText = `Linhas estimadas: ${linhas} / Mínimo: 7`;
+    }
+
+    // --- ENVIO DOS DADOS PARA O BACKEND ---
+    async function enviarRedacaoParaCorrigir() {
+        const seletor = document.getElementById('seletor-temas');
+        const tituloTema = seletor.options[seletor.selectedIndex].text;
+        const textoDigitado = document.getElementById('texto-redacao
