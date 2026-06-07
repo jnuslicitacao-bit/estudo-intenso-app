@@ -2,21 +2,31 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Simulado Rápido</title>
+    <title>Estudo Intenso - Gerador de Simulados IA</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
-        .container { max-width: 700px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
+        .container { max-width: 750px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
         .materia-tag { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .opcao { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .opcao { margin: 10px 0; padding: 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.2s; }
         .opcao:hover { background-color: #f0f4f8; border-color: #007bff; }
         .botoes { margin-top: 20px; display: flex; justify-content: space-between; }
-        button { background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; }
-        button:disabled { background-color: #ccc; }
+        button { background-color: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-ia { background-color: #8a2be2; }
+        .btn-ia:hover { background-color: #6a1b9a; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
+        .btn-voltar { background-color: #6c757d; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        .divisoria { display: flex; align-items: center; text-align: center; color: #64748b; margin: 20px 0; font-size: 14px; }
+        .divisoria::before, .divisoria::after { content: ''; flex: 1; border-bottom: 1px solid #cbd5e1; }
+        .divisoria:not(:empty)::before { margin-right: .25em; }
+        .divisoria:not(:empty)::after { margin-left: .25em; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
+
     <div style="background: #e9ecef; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
             <span style="font-weight: bold; color: #495057;">⏱️ Modo FocoAtivo:</span>
@@ -28,40 +38,49 @@
         </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Simulado Dinâmico</h2>
- <div id="bloco-selecao-materia" style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
-    <h3 style="margin-top: 0; color: #334155;">Foco Direcionado: O que você quer estudar hoje?</h3>
-    <select id="filtro-materia" style="padding: 10px; font-size: 16px; border-radius: 4px; width: 60%; max-width: 300px; border: 1px solid #cbd5e1;">
-        <option value="">-- Matérias Misturadas --</option>
-        <option value="Matemática">Matemática</option>
-        <option value="História">História</option>
-        <option value="Geografia">Geografia</option>
-        <option value="Português">Português</option>
-    </select>
-    <button onclick="iniciarSimuladoComFiltro()" style="background-color: #007bff; padding: 10px 20px; font-size: 16px; margin-left: 10px; border: none; color: white; border-radius: 4px; cursor: pointer;">
-        🚀 Iniciar Simulado
-    </button>
-</div>
+    <div id="bloco-selecao-materia">
+        <h3 style="margin-top: 0; color: #334155; text-align: center;">🎯 Configure Seu Treinamento de Alta Performance</h3>
+        
+        <div style="background: #f3e8ff; padding: 20px; border-radius: 6px; border: 1px solid #d8b4fe; margin-bottom: 15px;">
+            <label style="font-weight: bold; color: #6b21a8;" for="busca-banca">🤖 Gerador de Provas por Inteligência Artificial</label>
+            <p style="margin: 4px 0 12px 0; font-size: 13px; color: #581c87;">Digite a banca ou concurso alvo para a IA formular questões no padrão exato exigido.</p>
+            <input type="text" id="busca-banca" placeholder="Ex: Enem, EsSA, Senai RJ, FGV, Cesgranrio, FCC...">
+            <button id="btn-gerar-ia" class="btn-ia" style="width: 100%;" onclick="iniciarSimuladoIA()">Simular Estudo de Banca Especializada</button>
+        </div>
 
-<div id="bloco-questoes-simulado" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Simulado Dinâmico</h2>
-        <span id="materia" class="materia-tag">Carregando...</span>
+        <div class="divisoria">OU UTILIZE O HISTÓRICO LOCAL</div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+            <label style="font-weight: bold; color: #334155;" for="filtro-materia">Simulado Tradicional Fixado no Banco</label>
+            <select id="filtro-materia" style="padding: 10px; font-size: 16px; border-radius: 4px; width: 100%; border: 1px solid #cbd5e1; margin-top: 8px; margin-bottom: 12px; background: white;">
+                <option value="">-- Matérias Misturadas (Geral) --</option>
+                <option value="Matemática">Matemática</option>
+                <option value="História">História</option>
+                <option value="Geografia">Geografia</option>
+                <option value="Português">Português</option>
+            </select>
+            <button style="width: 100%;" onclick="iniciarSimuladoTradicional()">Iniciar de Forma Tradicional</button>
+        </div>
     </div>
-    <hr>
-    
-    <p id="enunciado" style="font-size: 18px; line-height: 1.6;">Aguardando questões do servidor...</p>
 
-    <div id="bloco-opcoes"></div>
+    <div id="bloco-questoes-simulado" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="titulo-simulado">Simulado Dinâmico</h2>
+            <span id="materia" class="materia-tag">Carregando...</span>
+        </div>
+        <hr>
+        
+        <p id="enunciado" style="font-size: 18px; line-height: 1.6;">Formulando caderno de questões...</p>
 
-    <div class="botoes">
-        <button id="btn-proxima" onclick="proximaQuestao()">Avançar Questão</button>
+        <div id="bloco-opcoes"></div>
+
+        <div class="botoes">
+            <button id="btn-proxima" onclick="proximaQuestao()">Avançar Questão</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- TRAVA DE SEGURANÇA E CONFIGURAÇÕES INICIAIS ---
     const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
     if (!dadosUsuario) {
         alert("Por favor, faça login primeiro.");
@@ -71,11 +90,12 @@
     let questoes = [];
     let indiceAtual = 0;
     let respostasAluno = {}; 
+    let modoIAAtivo = false; // Define se as questões vieram da OpenAI ou do Postgres
 
-    // --- LÓGICA DO TIMER POMODORO ---
-    let tempoRestante = 25 * 60; // 25 minutos em segundos
+    // --- LOGICA POMODORO TIMER ---
+    let tempoRestante = 25 * 60;
     let cronometroIntervalo = null;
-    let emModoFoco = true; 
+    let emModoFoco = true;
 
     function atualizarDisplayTimer() {
         const minutos = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
@@ -85,7 +105,6 @@
 
     function alternarTimer() {
         const btn = document.getElementById('btn-timer');
-        
         if (cronometroIntervalo) {
             clearInterval(cronometroIntervalo);
             cronometroIntervalo = null;
@@ -94,7 +113,6 @@
         } else {
             btn.innerText = "Pausar";
             btn.style.backgroundColor = "#dc3545";
-            
             cronometroIntervalo = setInterval(() => {
                 if (tempoRestante > 0) {
                     tempoRestante--;
@@ -102,21 +120,19 @@
                 } else {
                     clearInterval(cronometroIntervalo);
                     cronometroIntervalo = null;
-                    
                     if (emModoFoco) {
                         alert("⏰ Bloco de foco concluído! Hora de descansar 5 minutos.");
                         emModoFoco = false;
-                        tempoRestante = 5 * 60; 
+                        tempoRestante = 5 * 60;
                         document.getElementById('tipo-timer').innerText = "Descanso";
                         document.getElementById('tipo-timer').style.color = "#28a745";
                     } else {
-                        alert("💪 Pausa terminada! Pronto para mais 25 minutos de estudo intenso?");
+                        alert("💪 Pausa terminada! Pronto para mais 25 minutos?");
                         emModoFoco = true;
-                        tempoRestante = 25 * 60; 
+                        tempoRestante = 25 * 60;
                         document.getElementById('tipo-timer').innerText = "Focar!";
                         document.getElementById('tipo-timer').style.color = "#dc3545";
                     }
-                    
                     atualizarDisplayTimer();
                     btn.innerText = "Iniciar Próximo";
                     btn.style.backgroundColor = "#28a745";
@@ -125,20 +141,74 @@
         }
     }
 
-    // --- LÓGICA DE DADOS DO SIMULADO ---
-    async function carregarSimulado() {
+    // --- DISPARADORES DE SIMULADO ---
+
+    // Opção A: Iniciar via Inteligência Artificial
+    async function iniciarSimuladoIA() {
+        const bancaAlvo = document.getElementById('busca-banca').value.trim();
+        const btnIa = document.getElementById('btn-gerar-ia');
+        
+        if (!bancaAlvo) {
+            alert("Por favor, digite o nome de uma banca ou concurso para pesquisar!");
+            return;
+        }
+
+        btnIa.disabled = true;
+        btnIa.innerText = "🤖 Estruturando estilo da banca via IA... Aguarde...";
+
         try {
-            const resposta = await fetch('http://localhost:5000/api/questoes');
+            const resposta = await fetch('http://localhost:5000/api/questoes/ia', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ banca: bancaAlvo })
+            });
+            
             questoes = await resposta.json();
             
-            if(questoes.length > 0) {
-                mostrarQuestao();
+            if (questoes.length > 0) {
+                modoIAAtivo = true;
+                document.getElementById('titulo-simulado').innerText = `Simulado Especializado: ${bancaAlvo}`;
+                exibirPainelDeQuestoes();
             } else {
-                document.getElementById('enunciado').innerText = "Nenhuma questão encontrada no banco.";
+                alert("Não foi possível gerar questões para esse termo. Tente novamente.");
+                btnIa.disabled = false;
+                btnIa.innerText = "Simular Estudo de Banca Especializada";
             }
         } catch (erro) {
-            document.getElementById('enunciado').innerText = "Erro ao conectar com o backend. O servidor Python está rodando?";
+            alert("Erro de conexão com o ecossistema da OpenAI.");
+            btnIa.disabled = false;
+            btnIa.innerText = "Simular Estudo de Banca Especializada";
         }
+    }
+
+    // Opção B: Iniciar via Banco de Dados Local
+    async function iniciarSimuladoTradicional() {
+        const materiaSelecionada = document.getElementById('filtro-materia').value;
+        const url = materiaSelecionada 
+            ? `http://localhost:5000/api/questoes?materia=${encodeURIComponent(materiaSelecionada)}`
+            : 'http://localhost:5000/api/questoes';
+
+        try {
+            const resposta = await fetch(url);
+            questoes = await resposta.json();
+            
+            if (questoes.length > 0) {
+                modoIAAtivo = false;
+                document.getElementById('titulo-simulado').innerText = "Simulado Tradicional Local";
+                exibirPainelDeQuestoes();
+            } else {
+                alert("Nenhuma questão cadastrada para essa matéria no seu banco local.");
+            }
+        } catch (erro) {
+            alert("Erro ao conectar com o banco local.");
+        }
+    }
+
+    function exibirPainelDeQuestoes() {
+        document.getElementById('bloco-selecao-materia').style.display = 'none';
+        document.getElementById('bloco-questoes-simulado').style.display = 'block';
+        if (!cronometroIntervalo) alternarTimer();
+        mostrarQuestao();
     }
 
     function mostrarQuestao() {
@@ -150,9 +220,7 @@
         blocoOpcoes.innerHTML = ''; 
 
         for (const [letra, texto] of Object.entries(q.opcoes)) {
-            // Verifica se essa opção já havia sido selecionada anteriormente para manter marcada ao voltar/avançar
             const corFundo = respostasAluno[indiceAtual] === letra ? '#e0f0ff' : 'white';
-            
             blocoOpcoes.innerHTML += `
                 <div class="opcao" style="background-color: ${corFundo};" onclick="selecionarOpcao('${letra}')">
                     <strong>${letra})</strong> ${texto}
@@ -161,7 +229,7 @@
         }
 
         if (indiceAtual === questoes.length - 1) {
-            document.getElementById('btn-proxima').innerText = "Finalizar Simulado";
+            document.getElementById('btn-proxima').innerText = "Finalizar Caderno de Prova";
         } else {
             document.getElementById('btn-proxima').innerText = "Avançar Questão";
         }
@@ -169,8 +237,6 @@
 
     function selecionarOpcao(letra) {
         respostasAluno[indiceAtual] = letra;
-        
-        // Remove a marcação de todas e adiciona apenas na opção clicada atualmente
         const opcoes = document.querySelectorAll('.opcao');
         opcoes.forEach(op => op.style.backgroundColor = 'white');
         event.currentTarget.style.backgroundColor = '#e0f0ff';
@@ -186,11 +252,13 @@
             indiceAtual++;
             mostrarQuestao();
         } else {
+            // --- CORREÇÃO E ENVIOS ---
             let acertos = 0;
             
-            // Regra do MVP: Considera alternativa 'A' como gabarito padrão
             questoes.forEach((q, i) => {
-                if (respostasAluno[i] === 'A') { 
+                // Se for IA, compara com o gabarito real ("correta"). Se for do banco, assume 'A' por padrão do MVP.
+                const gabaritoCorreto = modoIAAtivo ? q.correta : 'A';
+                if (respostasAluno[i] === gabaritoCorreto) { 
                     acertos++;
                 }
             });
@@ -203,58 +271,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         usuario_id: dadosUsuario.id,
-                        materia: questoes[0].materia,
+                        materia: modoIAAtivo ? "Banca Inteligente IA" : questoes[0].materia,
                         nota: notaPorcentagem
                     })
                 });
 
-                const resultado = await resposta.json();
                 if (resposta.ok) {
-                    alert(`🏁 Simulado Concluído!\nSua nota: ${notaPorcentagem}%\nResultado salvo com sucesso no seu perfil!`);
+                    alert(`🏁 Simulado Concluído!\nSua nota final: ${notaPorcentagem}%\nResultado sincronizado com os gráficos do seu perfil!`);
                     window.location.href = 'perfil.html'; 
                 } else {
-                    alert("Erro ao salvar resultado: " + resultado.mensagem);
+                    alert("Erro ao sincronizar pontuação com o banco.");
                 }
             } catch (erro) {
-                alert("Erro de comunicação com o servidor ao finalizar.");
+                alert("Falha de rede ao computar resultado.");
             }
         }
     }
-
-    // Inicialização automática
-    carregarSimulado();
-
-    // Substitua a função antiga carregarSimulado() e adicione o controle de início:
-
-async function iniciarSimuladoComFiltro() {
-    const materiaSelecionada = document.getElementById('filtro-materia').value;
-    
-    // Esconde a seleção e exibe a área do simulado
-    document.getElementById('bloco-selecao-materia').style.display = 'none';
-    document.getElementById('bloco-questoes-simulado').style.display = 'block';
-    
-    // Dispara o Timer Pomodoro automaticamente junto com o início
-    alternarTimer();
-
-    try {
-        // Envia a matéria selecionada na URL para o Python filtrar
-        const url = materiaSelecionada 
-            ? `http://localhost:5000/api/questoes?materia=${encodeURIComponent(materiaSelecionada)}`
-            : 'http://localhost:5000/api/questoes';
-
-        const resposta = await fetch(url);
-        questoes = await resposta.json();
-        
-        if(questoes.length > 0) {
-            mostrarQuestao();
-        } else {
-            document.getElementById('enunciado').innerText = "Nenhuma questão dessa matéria foi encontrada no banco. Volte e mude o filtro.";
-            document.getElementById('btn-proxima').disabled = true;
-        }
-    } catch (erro) {
-        document.getElementById('enunciado').innerText = "Erro ao conectar com o servidor.";
-    }
-}
 </script>
 </body>
 </html>

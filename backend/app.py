@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pg8000.dbapi
@@ -276,6 +277,60 @@ def obter_temas():
         return jsonify(lista_temas), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+    
+import json # Garanta que tem o import json no topo do seu arquivo
+
+@app.route('/api/questoes/ia', methods=['POST'])
+def obter_questoes_ia():
+    """Gera questões inéditas simulando o estilo e o conteúdo de uma banca específica usando IA"""
+    dados = request.get_json()
+    pesquisa_banca = dados.get('banca')
+
+    if not pesquisa_banca:
+        return jsonify({"status": "erro", "mensagem": "Nenhuma banca informada."}), 400
+
+    prompt_sistema = "Você é um professor especialista em bancas de concursos públicos e vestibulares brasileiros."
+    prompt_usuario = f"""
+    Gere um simulado contendo exatamente 5 questões inéditas de múltipla escolha focadas estritamente no perfil, conteúdo programático e nível de dificuldade da seguinte banca/concurso: {pesquisa_banca}.
+    
+    As matérias devem ser relevantes para esse concurso. As alternativas corretas devem ser distribuídas aleatoriamente.
+    
+    Retorne ESTRITAMENTE um array em formato JSON puro, sem comentários, sem markdown (sem aspas ```json no início ou fim), seguindo EXATAMENTE a estrutura deste exemplo:
+    [
+      {{
+        "materia": "Nome da Disciplina",
+        "enunciado": "Texto do enunciado da questão...",
+        "opcoes": {{
+          "A": "Texto da alternativa A",
+          "B": "Texto da alternativa B",
+          "C": "Texto da alternativa C",
+          "D": "Texto da alternativa D",
+          "E": "Texto da alternativa E"
+        }},
+        "correta": "A"
+      }}
+    ]
+    """
+
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.5
+        )
+        
+        texto_resposta = resposta.choices[0].message.content.strip()
+        
+        # Converte a string JSON da IA em um objeto Python real
+        questoes_geradas = json.loads(texto_resposta)
+        
+        return jsonify(questoes_geradas), 200
+        
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": f"Erro ao gerar questões por IA: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
