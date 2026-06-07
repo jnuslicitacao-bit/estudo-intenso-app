@@ -4,75 +4,100 @@
     <meta charset="UTF-8">
     <title>Estudo Intenso - Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background-color: #f4f7f6; display: flex; justify-content: center; }
-        .dashboard { max-width: 800px; width: 100%; }
-        .header { text-align: center; margin-bottom: 40px; position: relative; }
-        .header h1 { color: #333; margin-bottom: 5px; }
-        .header p { color: #666; margin-top: 0; }
-        .user-info { background: #e2e3e5; padding: 8px 15px; border-radius: 20px; display: inline-block; font-size: 14px; margin-bottom: 20px; font-weight: bold; }
-        .btn-logout { background: none; border: none; color: #dc3545; cursor: pointer; font-weight: bold; text-decoration: underline; margin-left: 10px; }
-        .cards-container { display: flex; gap: 20px; justify-content: space-between; }
-        .card { flex: 1; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
-        .card h3 { color: #222; margin-top: 0; }
-        .card p { color: #555; font-size: 14px; line-height: 1.5; min-height: 45px; }
-        .btn { display: inline-block; margin-top: 15px; padding: 12px 24px; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; transition: background 0.2s; }
-        .btn-simulado { background-color: #007bff; }
-        .btn-simulado:hover { background-color: #0056b3; }
-        .btn-redacao { background-color: #ffc107; color: #212529; }
-        .btn-redacao:hover { background-color: #e0a800; }
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f7f6; }
+        .container { max-width: 850px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: auto; }
+        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 25px; }
+        .card { padding: 20px; text-align: center; background: #e9ecef; border-radius: 6px; text-decoration: none; color: #333; font-weight: bold; font-size: 16px; border: 1px solid #cbd5e1; transition: 0.2s; }
+        .card:hover { background: #cbd5e1; transform: translateY(-2px); }
+        .status-box { padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; }
+        .atualizado { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .desatualizado { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .btn-sync { background: #0d6efd; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .insight-box { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <div class="header">
-        <h1>Estudo Intenso 🚀</h1>
-        <p>Estratégia validada de fixação ativa para passar nas provas</p>
-        
-        <div class="user-info">
-            👤 Olá, <span id="nome-usuario">Estudante</span>! 
-            <button class="btn-logout" onclick="fazerLogout()">Sair</button>
-        </div>
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Plataforma Estudo Intenso</h2>
+        <button onclick="logout()" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Sair</button>
+    </div>
+    <p>Bem-vindo, <span id="nome-usuario" style="color:#007bff; font-weight:bold;">Estudante</span>!</p>
 
-        <div style="text-align: center; margin-top: 10px;">
-            <a href="perfil.html" style="color: #007bff; font-weight: bold; text-decoration: none;">📊 Ver Meu Desempenho e Gráficos</a>
-        </div>
+    <div id="barra-status" class="status-box desatualizado">
+        <span id="texto-status">Verificando integridade do sistema...</span>
+        <button id="btn-atualizar" class="btn-sync" onclick="forcarAtualizacao()">🔄 Atualizar Conteúdos</button>
     </div>
 
-    <div class="cards-container">
-        <div class="card">
-            <h3>Gerador de Simulados</h3>
-            <p>Treine com questões reais direto do banco de dados e teste seu tempo de reação.</p>
-            <a href="simulado.html" class="btn btn-simulado">Iniciar Simulado</a>
-        </div>
+    <div class="insight-box">
+        <strong>🧠 Insight Direcionado por IA:</strong>
+        <p id="txt-insight" style="margin: 5px 0 0 0; font-style: italic;">Analisando seu padrão de estudos...</p>
+    </div>
 
-        <div class="card">
-            <h3>Redação Dissertativa</h3>
-            <p>Envie seu texto argumentativo e receba uma análise de competências simulada por IA.</p>
-            <a href="redacao.html" class="btn btn-redacao">Escrever Redação</a>
-        </div>
+    <div class="menu-grid">
+        <a href="simulado.html" class="card" style="border-top: 5px solid #28a745;">📝 Treinar Simulados</a>
+        <a href="redacao.html" class="card" style="border-top: 5px solid #ffc107;">✍️ Laboratório de Redação</a>
+        <a href="perfil.html" class="card" style="border-top: 5px solid #007bff;">📊 Ver Desempenho</a>
     </div>
 </div>
 
 <script>
-    // TRAVA DE SEGURANÇA: Verifica se o usuário fez login
     const dadosUsuario = localStorage.getItem('usuario_estudo');
-    
-    if (!dadosUsuario) {
-        // Se não houver dados salvos no navegador, chuta o usuário de volta para a tela de login
-        alert("Acesso negado! Por favor, faça login primeiro.");
-        window.location.href = 'login.html';
-    } else {
-        // Se houver, coloca o nome real dele no topo da tela
-        const usuario = JSON.parse(dadosUsuario);
-        document.getElementById('nome-usuario').innerText = usuario.nome;
+    if (!dadosUsuario) { window.location.href = 'login.html'; }
+    const usuario = JSON.parse(dadosUsuario);
+    document.getElementById('nome-usuario').innerText = usuario.nome;
+
+    async function checarStatusSistema() {
+        try {
+            const r = await fetch('http://localhost:5000/api/sistema/status');
+            const dados = await r.json();
+            const barra = document.getElementById('barra-status');
+            const texto = document.getElementById('texto-status');
+            
+            if (dados.status === "atualizado") {
+                barra.className = "status-box atualizado";
+                texto.innerText = `✅ Sistema Otimizado (Última sincronização: ${dados.ultima})`;
+                document.getElementById('btn-atualizar').style.display = "none";
+            } else {
+                barra.className = "status-box desatualizado";
+                texto.innerText = `⚠️ Conteúdos defasados. Atualize para receber novas questões baseadas no mercado.`;
+                document.getElementById('btn-atualizar').style.display = "block";
+            }
+        } catch(e) { console.error(e); }
     }
 
-    function fazerLogout() {
+    async function forcarAtualizacao() {
+        const btn = document.getElementById('btn-atualizar');
+        btn.disabled = true;
+        btn.innerText = "Sincronizando Banco via IA...";
+        
+        const r = await fetch('http://localhost:5000/api/sistema/atualizar', { method: 'POST' });
+        if(r.ok) {
+            alert("Banco de dados atualizado com novas propostas e simulados adaptativos!");
+            checarStatusSistema();
+        } else {
+            alert("Erro ao atualizar.");
+            btn.disabled = false;
+            btn.innerText = "🔄 Atualizar Conteúdos";
+        }
+    }
+
+    async function carregarInsights() {
+        try {
+            const r = await fetch(`http://localhost:5000/api/insights?usuario_id=${usuario.id}`);
+            const dados = await r.json();
+            document.getElementById('txt-insight').innerText = dados.insight;
+        } catch(e) { console.error(e); }
+    }
+
+    function logout() {
         localStorage.removeItem('usuario_estudo');
         window.location.href = 'login.html';
     }
+
+    checarStatusSistema();
+    carregarInsights();
 </script>
 </body>
-</html>cd 
+</html>

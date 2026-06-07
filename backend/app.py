@@ -257,29 +257,47 @@ def obter_desempenho():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
     
 @app.route('/api/temas', methods=['GET'])
-def obter_temas():
-    """Busca a lista de temas de redação cadastrados com seus textos motivadores"""
+def obtener_temas():
+    """Busca temas de redação. Se o banco estiver vazio, popula automaticamente."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Garante a existência da tabela
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS temas_redacao (
+                id SERIAL PRIMARY KEY,
+                titulo VARCHAR(255) NOT NULL UNIQUE,
+                textos_motivadores TEXT NOT NULL
+            );
+        """)
+        conn.commit()
+
         cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
         temas_banco = cur.fetchall()
+
+        # Se não houver temas, insere os padrões do ENEM/Concursos imediatamente
+        if not temas_banco:
+            temas_padrao = [
+                ("O impacto da inteligência artificial na educação do século XXI", "Texto 1: A tecnologia avança rápido... Texto 2: Dados mostram que o uso de ferramentas de IA cresceu 40% nas escolas..."),
+                ("Caminhos para combater a evasão escolar no Brasil contemporâneo", "Texto 1: A pandemia intensificou a saída de jovens... Texto 2: O principal fator é a necessidade de trabalhar...")
+            ]
+            for titulo, texto in temas_padrao:
+                cur.execute("INSERT INTO temas_redacao (titulo, textos_motivadores) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (titulo, texto))
+            conn.commit()
+            
+            # Recarrega após inserir
+            cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
+            temas_banco = cur.fetchall()
+
         cur.close()
         conn.close()
         
-        lista_temas = []
-        for t in temas_banco:
-            lista_temas.append({
-                "id": t[0],
-                "titulo": t[1],
-                "textos_motivadores": t[2]
-            })
+        lista_temas = [{"id": t[0], "titulo": t[1], "textos_motivadores": t[2]} for t in temas_banco]
         return jsonify(lista_temas), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
     
-import json # Garanta que tem o import json no topo do seu arquivo
-
 @app.route('/api/questoes/ia', methods=['POST'])
 def obter_questoes_ia():
     """Gera questões inéditas simulando o estilo e o conteúdo de uma banca específica usando IA"""
@@ -331,6 +349,108 @@ def obter_questoes_ia():
         
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": f"Erro ao gerar questões por IA: {str(e)}"}), 500
+
+from datetime import datetime, timedelta
+
+@app.route('/api/sistema/status', methods=['GET'])
+def status_sistema():
+    """Verifica se o sistema precisa de atualização (expira em 2 dias)"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                id SERIAL PRIMARY KEY,
+                ultima_atualizacao TIMESTAMP NOT NULL
+            );
+        """)
+        cur.execute("SELECT ultima_atualizacao FROM controle_atualizacao ORDER BY id DESC LIMIT 1;")
+        resultado = cur.fetchone()
+        
+        if not resultado:
+            # Nunca atualizado
+            return jsonify({"status": "desatualizado", "ultima": "Nunca"}), 200
+            
+        ultima_data = resultado[0]
+        # Se a última atualização foi há mais de 48 horas, fica desatualizado
+        if datetime.now() - ultima_data > timedelta(days=2):
+            return jsonify({"status": "desatualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
+            
+        return jsonify({"status": "atualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+@app.route('/api/sistema/atualizar', methods=['POST'])
+def atualizar_sistema():
+    """IA gera novos pacotes de simulados gerais para alimentar o banco de dados"""
+    try:
+        prompt = """
+        Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
+        Retorne estritamente em formato JSON puro (array), sem markdown:
+        [
+          {"materia": "Matemática", "enunciado": "...", "opcoes": {"A": "..", "B": "..", "C": "..", "D": "..", "E": ".."}, "correta": "A"}
+        ]
+        """
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        questoes = json.loads(resposta.choices[0].message.content.strip())
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        for q in questoes:
+            cur.execute(
+                "INSERT INTO questoes (materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e) VALUES (%s, %s, %s, %s, %s, %s, %s);",
+                (q['materia'], q['enunciado'], q['opcoes']['A'], q['opcoes']['B'], q['opcoes']['C'], q['opcoes']['D'], q['opcoes']['E'])
+            )
+            
+        # Atualiza o timestamp de controle
+        cur.execute("INSERT INTO controle_atualizacao (ultima_atualizacao) VALUES (%s);", (datetime.now(),))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"status": "sucesso", "mensagem": "Banco de dados alimentado com sucesso!"}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+@app.route('/api/insights', methods=['GET'])
+def obter_insights():
+    """Analisa o desempenho do usuário e gera dicas inteligentes personalizadas"""
+    usuario_id = request.args.get('usuario_id')
+    if not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "ID em falta"}), 400
+        
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Puxa os últimos simulados feitos pelo usuário
+        cur.execute("SELECT materia, nota FROM simulados_historico WHERE usuario_id = %s ORDER BY id DESC LIMIT 5;", (usuario_id,))
+        historico = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not historico:
+            return jsonify({"insight": "Realize seu primeiro simulado para a inteligência ativa analisar seus pontos fracos!"}), 200
+            
+        dados_estudo = ", ".join([f"Matéria: {h[0]} (Nota: {h[1]}%)" for h in historico])
+        
+        prompt = f"""
+        Com base no seguinte histórico recente de simulados do aluno: [{dados_estudo}].
+        Identifique a maior fraqueza dele e retorne uma única dica cirúrgica e motivadora de até 3 linhas de como ele pode melhorar essa matéria específica.
+        """
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+        
+        return jsonify({"insight": respuesta.choices[0].message.content.strip()}), 200
+    except Exception as e:
+        return jsonify({"insight": "Análise indisponível no momento."}), 200
 
 if __name__ == '__main__':
     # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
