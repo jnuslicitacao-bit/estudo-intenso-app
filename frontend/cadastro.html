@@ -2,15 +2,15 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Estudo Intenso - Login</title>
+    <title>Estudo Intenso - Criar Conta</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; height: 100vh; margin: 0; align-items: center; justify-content: center; }
         .auth-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
         h2 { margin-top: 0; color: #333; text-align: center; margin-bottom: 25px; }
         label { font-weight: bold; color: #4b5563; font-size: 14px; display: block; margin-bottom: 6px; }
         input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 15px; margin-bottom: 20px; }
-        .btn-auth { background-color: #28a745; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
-        .btn-auth:hover { background-color: #218838; }
+        .btn-auth { background-color: #007bff; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; }
+        .btn-auth:hover { background-color: #0056b3; }
         .footer-link { text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280; }
         .footer-link a { color: #007bff; text-decoration: none; font-weight: bold; }
     </style>
@@ -18,49 +18,52 @@
 <body>
 
 <div class="auth-card">
-    <h2>Acessar Plataforma</h2>
+    <h2>Criar Nova Conta</h2>
     
-    <label for="email">E-mail Cadastrado:</label>
+    <label for="nome">Nome Completo:</label>
+    <input type="text" id="nome" placeholder="Ex: Gutemberg Silva">
+
+    <label for="email">E-mail de Acesso:</label>
     <input type="email" id="email" placeholder="seuemail@exemplo.com">
 
-    <label for="senha">Sua Senha:</label>
+    <label for="senha">Crie uma Senha:</label>
     <input type="password" id="senha" placeholder="••••••••">
 
-    <button class="btn-auth" onclick="executarLogin()">Entrar no Sistema →</button>
+    <button class="btn-auth" onclick="executarCadastro()">Registrar na Plataforma 🚀</button>
 
     <div class="footer-link">
-        Novo por aqui? <a href="cadastro.html">Criar uma conta</a>
+        Já tem uma conta? <a href="login.html">Fazer Login</a>
     </div>
 </div>
 
 <script>
-    // Mude de "ejecutarLogin" para "executarLogin" com o "r"
-    async function executarLogin() {
+    async function executarCadastro() {
+        const nome = document.getElementById('nome').value.trim();
         const email = document.getElementById('email').value.trim();
         const senha = document.getElementById('senha').value;
 
-        if (!email || !senha) {
-            alert("Preencha e-mail e senha!");
+        if (!nome || !email || !senha) {
+            alert("Por favor, preencha todos os campos!");
             return;
         }
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/login', {
+            const resposta = await fetch('http://localhost:5000/api/cadastro', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, senha })
+                body: JSON.stringify({ nome, email, senha })
             });
 
             const dados = await resposta.json();
 
-            if (resposta.ok && dados.status === "sucesso") {
-                localStorage.setItem('usuario_estudo', JSON.stringify(dados.usuario));
-                window.location.href = 'index.html';
+            if (resposta.ok) {
+                alert("🎉 Conta criada com sucesso! Você será redirecionado para a tela de login.");
+                window.location.href = 'login.html';
             } else {
-                alert("Falha no acesso: " + dados.mensagem);
+                alert("Erro ao cadastrar: " + dados.mensagem);
             }
         } catch (erro) {
-            alert("Erro crítico de comunicação com o servidor.");
+            alert("Erro crítico ao conectar com o servidor.");
         }
     }
 </script>
