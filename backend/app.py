@@ -94,24 +94,39 @@ def login_usuario():
 
 @app.route('/api/questoes', methods=['GET'])
 def obter_questoes():
-    """Busca questões de fixação ativa no banco de dados para o simulado"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e FROM questoes LIMIT 10;")
-    questoes = cur.fetchall()
-    cur.close()
-    conn.close()
+    """Busca questões no banco de dados, permitindo filtrar por matéria de forma opcional"""
+    materia_filtrada = request.args.get('materia') # Captura a matéria enviada na URL
     
-    lista_questoes = []
-    for q in questoes:
-        lista_questoes.append({
-            "id": q[0], 
-            "materia": q[1], 
-            "enunciado": q[2],
-            "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
-        })
-    return jsonify(lista_questoes)
-
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        if materia_filtrada:
+            # Busca apenas questões da matéria selecionada
+            cur.execute(
+                "SELECT id, materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e FROM questoes WHERE LOWER(materia) = LOWER(%s) LIMIT 10;",
+                (materia_filtrada,)
+            )
+        else:
+            # Se não passar matéria, traz de forma geral
+            cur.execute("SELECT id, materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e FROM questoes LIMIT 10;")
+            
+        questoes = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        lista_questoes = []
+        for q in questoes:
+            lista_questoes.append({
+                "id": q[0], 
+                "materia": q[1], 
+                "enunciado": q[2],
+                "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
+            })
+        return jsonify(lista_questoes), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+    
 @app.route('/api/simulado/salvar', methods=['POST'])
 def salvar_simulado():
     """Registra a pontuação real do estudante após concluir um simulado"""

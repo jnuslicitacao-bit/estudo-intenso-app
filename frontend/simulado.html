@@ -30,14 +30,30 @@
 
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Simulado Dinâmico</h2>
+ <div id="bloco-selecao-materia" style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; text-align: center;">
+    <h3 style="margin-top: 0; color: #334155;">Foco Direcionado: O que você quer estudar hoje?</h3>
+    <select id="filtro-materia" style="padding: 10px; font-size: 16px; border-radius: 4px; width: 60%; max-width: 300px; border: 1px solid #cbd5e1;">
+        <option value="">-- Matérias Misturadas --</option>
+        <option value="Matemática">Matemática</option>
+        <option value="História">História</option>
+        <option value="Geografia">Geografia</option>
+        <option value="Português">Português</option>
+    </select>
+    <button onclick="iniciarSimuladoComFiltro()" style="background-color: #007bff; padding: 10px 20px; font-size: 16px; margin-left: 10px; border: none; color: white; border-radius: 4px; cursor: pointer;">
+        🚀 Iniciar Simulado
+    </button>
+</div>
+
+<div id="bloco-questoes-simulado" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Simulado Dinâmico</h2>
         <span id="materia" class="materia-tag">Carregando...</span>
     </div>
     <hr>
     
     <p id="enunciado" style="font-size: 18px; line-height: 1.6;">Aguardando questões do servidor...</p>
 
-    <div id="bloco-opcoes">
-        </div>
+    <div id="bloco-opcoes"></div>
 
     <div class="botoes">
         <button id="btn-proxima" onclick="proximaQuestao()">Avançar Questão</button>
@@ -207,6 +223,38 @@
 
     // Inicialização automática
     carregarSimulado();
+
+    // Substitua a função antiga carregarSimulado() e adicione o controle de início:
+
+async function iniciarSimuladoComFiltro() {
+    const materiaSelecionada = document.getElementById('filtro-materia').value;
+    
+    // Esconde a seleção e exibe a área do simulado
+    document.getElementById('bloco-selecao-materia').style.display = 'none';
+    document.getElementById('bloco-questoes-simulado').style.display = 'block';
+    
+    // Dispara o Timer Pomodoro automaticamente junto com o início
+    alternarTimer();
+
+    try {
+        // Envia a matéria selecionada na URL para o Python filtrar
+        const url = materiaSelecionada 
+            ? `http://localhost:5000/api/questoes?materia=${encodeURIComponent(materiaSelecionada)}`
+            : 'http://localhost:5000/api/questoes';
+
+        const resposta = await fetch(url);
+        questoes = await resposta.json();
+        
+        if(questoes.length > 0) {
+            mostrarQuestao();
+        } else {
+            document.getElementById('enunciado').innerText = "Nenhuma questão dessa matéria foi encontrada no banco. Volte e mude o filtro.";
+            document.getElementById('btn-proxima').disabled = true;
+        }
+    } catch (erro) {
+        document.getElementById('enunciado').innerText = "Erro ao conectar com o servidor.";
+    }
+}
 </script>
 </body>
 </html>
