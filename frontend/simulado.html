@@ -23,10 +23,11 @@
             <span id="tipo-timer" style="margin-left: 5px; color: #dc3545; font-weight: bold;">Focar!</span>
         </div>
         <div id="cronometro" style="font-size: 24px; font-weight: bold; font-family: monospace; color: #212529;">25:00</div>
-            <div>
-                <button id="btn-timer" onclick="alternarTimer()" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px;">Iniciar Foco</button>
-            </div>
+        <div>
+            <button id="btn-timer" onclick="alternarTimer()" style="background-color: #6c757d; padding: 5px 10px; font-size: 14px;">Iniciar Foco</button>
+        </div>
     </div>
+
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Simulado Dinâmico</h2>
         <span id="materia" class="materia-tag">Carregando...</span>
@@ -44,65 +45,71 @@
 </div>
 
 <script>
-    // VARIÁVEIS DO TIMER POMODORO
-let tempoRestante = 25 * 60; // 25 minutos em segundos
-let cronometroIntervalo = null;
-let emModoFoco = true; // true = foco (25 min), false = pausa (5 min)
-
-function atualizarDisplayTimer() {
-    const minutos = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
-    const segundos = (tempoRestante % 60).toString().padStart(2, '0');
-    document.getElementById('cronometro').innerText = `${minutos}:${segundos}`;
-}
-
-function alternarTimer() {
-    const btn = document.getElementById('btn-timer');
-    
-    if (cronometroIntervalo) {
-        // Se já está rodando, pausa
-        clearInterval(cronometroIntervalo);
-        cronometroIntervalo = null;
-        btn.innerText = "Retomar Foco";
-        btn.style.backgroundColor = "#6c757d";
-    } else {
-        // Se está parado, inicia
-        btn.innerText = "Pausar";
-        btn.style.backgroundColor = "#dc3545";
-        
-        cronometroIntervalo = setInterval(() => {
-            if (tempoRestante > 0) {
-                tempoRestante--;
-                atualizarDisplayTimer();
-            } else {
-                // O tempo acabou! Alterna entre Foco e Pausa
-                clearInterval(cronometroIntervalo);
-                cronometroIntervalo = null;
-                
-                if (emModoFoco) {
-                    alert("⏰ Bloco de foco concluído! Hora de descansar 5 minutos.");
-                    emModoFoco = false;
-                    tempoRestante = 5 * 60; // 5 minutos de pausa
-                    document.getElementById('tipo-timer').innerText = "Descanso";
-                    document.getElementById('tipo-timer').style.color = "#28a745";
-                } else {
-                    alert("💪 Pausa terminada! Pronto para mais 25 minutos de estudo intenso?");
-                    emModoFoco = true;
-                    tempoRestante = 25 * 60; // 25 minutos de foco
-                    document.getElementById('tipo-timer').innerText = "Focar!";
-                    document.getElementById('tipo-timer').style.color = "#dc3545";
-                }
-                
-                atualizarDisplayTimer();
-                btn.innerText = "Iniciar Próximo";
-                btn.style.backgroundColor = "#28a745";
-            }
-        }, 1000);
+    // --- TRAVA DE SEGURANÇA E CONFIGURAÇÕES INICIAIS ---
+    const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
+    if (!dadosUsuario) {
+        alert("Por favor, faça login primeiro.");
+        window.location.href = 'login.html';
     }
-}
+
     let questoes = [];
     let indiceAtual = 0;
+    let respostasAluno = {}; 
 
-    // Função que busca as questões lá no seu Backend Python
+    // --- LÓGICA DO TIMER POMODORO ---
+    let tempoRestante = 25 * 60; // 25 minutos em segundos
+    let cronometroIntervalo = null;
+    let emModoFoco = true; 
+
+    function atualizarDisplayTimer() {
+        const minutos = Math.floor(tempoRestante / 60).toString().padStart(2, '0');
+        const segundos = (tempoRestante % 60).toString().padStart(2, '0');
+        document.getElementById('cronometro').innerText = `${minutos}:${segundos}`;
+    }
+
+    function alternarTimer() {
+        const btn = document.getElementById('btn-timer');
+        
+        if (cronometroIntervalo) {
+            clearInterval(cronometroIntervalo);
+            cronometroIntervalo = null;
+            btn.innerText = "Retomar Foco";
+            btn.style.backgroundColor = "#6c757d";
+        } else {
+            btn.innerText = "Pausar";
+            btn.style.backgroundColor = "#dc3545";
+            
+            cronometroIntervalo = setInterval(() => {
+                if (tempoRestante > 0) {
+                    tempoRestante--;
+                    atualizarDisplayTimer();
+                } else {
+                    clearInterval(cronometroIntervalo);
+                    cronometroIntervalo = null;
+                    
+                    if (emModoFoco) {
+                        alert("⏰ Bloco de foco concluído! Hora de descansar 5 minutos.");
+                        emModoFoco = false;
+                        tempoRestante = 5 * 60; 
+                        document.getElementById('tipo-timer').innerText = "Descanso";
+                        document.getElementById('tipo-timer').style.color = "#28a745";
+                    } else {
+                        alert("💪 Pausa terminada! Pronto para mais 25 minutos de estudo intenso?");
+                        emModoFoco = true;
+                        tempoRestante = 25 * 60; 
+                        document.getElementById('tipo-timer').innerText = "Focar!";
+                        document.getElementById('tipo-timer').style.color = "#dc3545";
+                    }
+                    
+                    atualizarDisplayTimer();
+                    btn.innerText = "Iniciar Próximo";
+                    btn.style.backgroundColor = "#28a745";
+                }
+            }, 1000);
+        }
+    }
+
+    // --- LÓGICA DE DADOS DO SIMULADO ---
     async function carregarSimulado() {
         try {
             const resposta = await fetch('http://localhost:5000/api/questoes');
@@ -118,19 +125,20 @@ function alternarTimer() {
         }
     }
 
-    // Função que renderiza a questão atual na tela
     function mostrarQuestao() {
         const q = questoes[indiceAtual];
         document.getElementById('materia').innerText = q.materia.toUpperCase();
         document.getElementById('enunciado').innerText = `${indiceAtual + 1}. ${q.enunciado}`;
         
         const blocoOpcoes = document.getElementById('bloco-opcoes');
-        blocoOpcoes.innerHTML = ''; // Limpa as opções anteriores
+        blocoOpcoes.innerHTML = ''; 
 
-        // Loop pelas alternativas A, B, C, D, E
         for (const [letra, texto] of Object.entries(q.opcoes)) {
+            // Verifica se essa opção já havia sido selecionada anteriormente para manter marcada ao voltar/avançar
+            const corFundo = respostasAluno[indiceAtual] === letra ? '#e0f0ff' : 'white';
+            
             blocoOpcoes.innerHTML += `
-                <div class="opcao" onclick="selecionarOpcao('${letra}')">
+                <div class="opcao" style="background-color: ${corFundo};" onclick="selecionarOpcao('${letra}')">
                     <strong>${letra})</strong> ${texto}
                 </div>
             `;
@@ -138,24 +146,66 @@ function alternarTimer() {
 
         if (indiceAtual === questoes.length - 1) {
             document.getElementById('btn-proxima').innerText = "Finalizar Simulado";
+        } else {
+            document.getElementById('btn-proxima').innerText = "Avançar Questão";
         }
     }
 
     function selecionarOpcao(letra) {
-        alert(`Você selecionou a alternativa ${letra}. No app completo, salvamos isso para gerar sua nota!`);
+        respostasAluno[indiceAtual] = letra;
+        
+        // Remove a marcação de todas e adiciona apenas na opção clicada atualmente
+        const opcoes = document.querySelectorAll('.opcao');
+        opcoes.forEach(op => op.style.backgroundColor = 'white');
+        event.currentTarget.style.backgroundColor = '#e0f0ff';
     }
 
-    function proximaQuestao() {
+    async function proximaQuestao() {
+        if (!respostasAluno[indiceAtual]) {
+            alert("Por favor, selecione uma alternativa antes de continuar!");
+            return;
+        }
+
         if (indiceAtual < questoes.length - 1) {
             indiceAtual++;
             mostrarQuestao();
         } else {
-            alert("Simulado concluído com sucesso! Excelente treino focado.");
-            window.location.reload(); // Reseta para o teste
+            let acertos = 0;
+            
+            // Regra do MVP: Considera alternativa 'A' como gabarito padrão
+            questoes.forEach((q, i) => {
+                if (respostasAluno[i] === 'A') { 
+                    acertos++;
+                }
+            });
+
+            const notaPorcentagem = Math.round((acertos / questoes.length) * 100);
+
+            try {
+                const resposta = await fetch('http://localhost:5000/api/simulado/salvar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario_id: dadosUsuario.id,
+                        materia: questoes[0].materia,
+                        nota: notaPorcentagem
+                    })
+                });
+
+                const resultado = await resposta.json();
+                if (resposta.ok) {
+                    alert(`🏁 Simulado Concluído!\nSua nota: ${notaPorcentagem}%\nResultado salvo com sucesso no seu perfil!`);
+                    window.location.href = 'perfil.html'; 
+                } else {
+                    alert("Erro ao salvar resultado: " + resultado.mensagem);
+                }
+            } catch (erro) {
+                alert("Erro de comunicação com o servidor ao finalizar.");
+            }
         }
     }
 
-    // Inicializa o simulado quando a página abre
+    // Inicialização automática
     carregarSimulado();
 </script>
 </body>
