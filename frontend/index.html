@@ -388,9 +388,48 @@
         window.location.href = 'login.html';
     }
 
-    // Inicialização da página
+    // --- CARREGAMENTO DO HISTÓRICO DE NOTAS DA NUVEM ---
+    async function carregarResultadosLocais() {
+        try {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/simulados/historico?usuario_id=${usuario.id}`);
+            const dados = await r.json();
+            
+            const container = document.getElementById('lista-resultados-locais');
+            
+            if (!Array.isArray(dados) || dados.length === 0) {
+                container.innerHTML = `
+                    <div class="resultado-item">
+                        <span class="materia-nome" style="color: var(--text-muted); font-style: italic;">Nenhum simulado feito</span>
+                        <span class="nota-badge">0%</span>
+                    </div>`;
+                return;
+            }
+
+            // Limpa o esqueleto padrão e renderiza os dados reais da nuvem
+            container.innerHTML = '';
+            dados.forEach(item => {
+                container.innerHTML += `
+                    <div class="resultado-item">
+                        <span class="materia-nome">${item.materia}</span>
+                        <span class="nota-badge">${item.nota}%</span>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            console.error("Erro ao puxar histórico do Render:", e);
+            document.getElementById('lista-resultados-locais').innerHTML = `
+                <div class="resultado-item">
+                    <span class="materia-nome" style="color: #ef4444;">Erro de conexão</span>
+                    <span class="nota-badge">--</span>
+                </div>`;
+        }
+    }
+
+    // Chame a função na inicialização do arquivo (no final da tag <script>)
     checarStatusDoSistema();
     carregarInsightsDoEstudante();
+    carregarResultadosLocais(); // 🌟 Ativa a busca ao abrir a página
+
 </script>
 </body>
 </html>

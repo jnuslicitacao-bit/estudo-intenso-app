@@ -308,13 +308,13 @@
                         emModoFoco = false;
                         tempoRestante = 5 * 60;
                         document.getElementById('tipo-timer').innerText = "Descanso";
-                        document.getElementById('tipo-timer').style.color = var(--success);
+                        document.getElementById('tipo-timer').style.color = "#10b981"; // 🍏 Cor Verde (Success)
                     } else {
                         alert("💪 Descanso terminado! Hora de focar de novo.");
                         emModoFoco = true;
                         tempoRestante = 25 * 60;
                         document.getElementById('tipo-timer').innerText = "Focar!";
-                        document.getElementById('tipo-timer').style.color = var(--danger);
+                        document.getElementById('tipo-timer').style.color = "#ef4444"; // 🍎 Cor Vermelha (Danger)
                     }
                     atualizarDisplayTimer();
                     btn.innerText = "Iniciar Foco";
