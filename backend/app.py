@@ -257,13 +257,13 @@ def obter_desempenho():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
     
 @app.route('/api/temas', methods=['GET'])
-def obtener_temas():
-    """Busca temas de redação. Se o banco estiver vazio, popula automaticamente."""
+def obter_temas_redacao():
+    """Busca os temas de redação direto no banco de dados de forma simplificada"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Garante a existência da tabela
+        # Cria a tabela caso ela tenha sido apagada
         cur.execute("""
             CREATE TABLE IF NOT EXISTS temas_redacao (
                 id SERIAL PRIMARY KEY,
@@ -273,29 +273,46 @@ def obtener_temas():
         """)
         conn.commit()
 
+        # Faz uma busca direta
         cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
         temas_banco = cur.fetchall()
 
-        # Se não houver temas, insere os padrões do ENEM/Concursos imediatamente
+        # Se a tabela estiver vazia, coloca dados iniciais na hora
         if not temas_banco:
-            temas_padrao = [
-                ("O impacto da inteligência artificial na educação do século XXI", "Texto 1: A tecnologia avança rápido... Texto 2: Dados mostram que o uso de ferramentas de IA cresceu 40% nas escolas..."),
-                ("Caminhos para combater a evasão escolar no Brasil contemporâneo", "Texto 1: A pandemia intensificou a saída de jovens... Texto 2: O principal fator é a necessidade de trabalhar...")
-            ]
-            for titulo, texto in temas_padrao:
-                cur.execute("INSERT INTO temas_redacao (titulo, textos_motivadores) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (titulo, texto))
+            cur.execute("""
+                INSERT INTO temas_redacao (titulo, textos_motivadores) VALUES 
+                ('O impacto da inteligência artificial na educação do século XXI', 'Texto 1: A tecnologia avança rápido... Texto 2: Dados mostram que o uso de ferramentas de IA cresceu 40% nas escolas...'),
+                ('Caminhos para combater a evasão escolar no Brasil contemporâneo', 'Texto 1: A pandemia intensificou a saída de jovens... Texto 2: O principal fator é a necessidade de trabalhar...')
+                ON CONFLICT DO NOTHING;
+            """)
             conn.commit()
             
-            # Recarrega após inserir
+            # Busca novamente após alimentar
             cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
             temas_banco = cur.fetchall()
 
         cur.close()
         conn.close()
         
-        lista_temas = [{"id": t[0], "titulo": t[1], "textos_motivadores": t[2]} for t in temas_banco]
+        # Formata a resposta
+        lista_temas = []
+        # CONVERSÃO DE ENCODING BLINDADA:
+        lista_temas = []
+        for t in temas_banco:
+            # Força o Python a tratar o título e os textos motivadores como texto puro UTF-8
+            titulo_limpo = t[1].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[1], str) else t[1]
+            textos_limpos = t[2].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[2], str) else t[2]
+            
+            lista_temas.append({
+                "id": t[0],
+                "titulo": titulo_limpo,
+                "textos_motivadores": textos_limpos
+            })
+            
         return jsonify(lista_temas), 200
+
     except Exception as e:
+        print(f"❌ ERRO CRÍTICO NA ROTA DE TEMAS: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
     
 @app.route('/api/questoes/ia', methods=['POST'])
@@ -382,11 +399,12 @@ def status_sistema():
 
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
-    """IA gera novos pacotes de simulados gerais para alimentar o banco de dados"""
+    """IA gera novos pacotes de simulados gerais e o backend limpa e salva com segurança"""
     try:
         prompt = """
         Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
-        Retorne estritamente em formato JSON puro (array), sem markdown:
+        Retorne estritamente em formato JSON puro (um array de objetos), sem usar blocos de código markdown (não coloque ```json no início).
+        Use a estrutura:
         [
           {"materia": "Matemática", "enunciado": "...", "opcoes": {"A": "..", "B": "..", "C": "..", "D": "..", "E": ".."}, "correta": "A"}
         ]
@@ -396,25 +414,43 @@ def atualizar_sistema():
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
-        questoes = json.loads(resposta.choices[0].message.content.strip())
         
+        texto_resposta = resposta.choices[0].message.content.strip()
+        
+        # 🛡️ TRATAMENTO DE SEGURANÇA: Remove possíveis marcações de markdown injetadas pela IA
+        if texto_resposta.startswith("```json"):
+            texto_resposta = texto_resposta.replace("```json", "", 1)
+        if texto_resposta.endswith("```"):
+            texto_resposta = texto_resposta[:-3]
+        texto_resposta = texto_resposta.strip()
+
+        # Converte a string tratada para um objeto array do Python
+        questoes = json.loads(texto_resposta)
+        
+        # ... dentro de def atualizar_sistema():
         conn = get_db_connection()
         cur = conn.cursor()
         
         for q in questoes:
+            # Incluímos a coluna 'resposta_correta' e passamos o 'q['correta']' no final
             cur.execute(
-                "INSERT INTO questoes (materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e) VALUES (%s, %s, %s, %s, %s, %s, %s);",
-                (q['materia'], q['enunciado'], q['opcoes']['A'], q['opcoes']['B'], q['opcoes']['C'], q['opcoes']['D'], q['opcoes']['E'])
+                """INSERT INTO questoes (materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, resposta_correta) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s);""",
+                (q['materia'], q['enunciado'], q['opcoes']['A'], q['opcoes']['B'], q['opcoes']['C'], q['opcoes']['D'], q['opcoes']['E'], q['correta'])
             )
             
-        # Atualiza o timestamp de controle
+        # Registra o momento exato da atualização para revalidar os 2 dias
         cur.execute("INSERT INTO controle_atualizacao (ultima_atualizacao) VALUES (%s);", (datetime.now(),))
+        # ... continua o código igual
         conn.commit()
         cur.close()
         conn.close()
         
         return jsonify({"status": "sucesso", "mensagem": "Banco de dados alimentado com sucesso!"}), 200
+        
     except Exception as e:
+        # Se der erro, printa o motivo real no terminal para sabermos exatamente o que houve
+        print(f"❌ ERRO CRÍTICO NA ATUALIZAÇÃO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route('/api/insights', methods=['GET'])

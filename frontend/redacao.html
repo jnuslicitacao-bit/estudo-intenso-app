@@ -51,34 +51,39 @@
 </div>
 
 <script>
-    // --- TRAVA DE SEGURANÇA ---
-    const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
+    // --- 1. CONFIGURAÇÕES INICIAIS E SEGURANÇA ---
+    const dadosUsuario = localStorage.getItem('usuario_estudo');
     if (!dadosUsuario) {
         alert("Acesso negado! Por favor, faça login primeiro.");
         window.location.href = 'login.html';
     }
-
+    const usuario = JSON.parse(dadosUsuario);
     let listaDeTemas = [];
 
-    // --- CARREGAMENTO INICIAL DOS TEMAS ---
+    // --- 2. CARREGAMENTO DOS TEMAS ---
     async function carregarTemasDoBanco() {
         try {
             const resposta = await fetch('http://localhost:5000/api/temas');
             listaDeTemas = await resposta.json();
             
             const seletor = document.getElementById('seletor-temas');
-            seletor.innerHTML = '<option value="">-- Clique aqui para selecionar --</option>';
             
+            if (!Array.isArray(listaDeTemas) || listaDeTemas.length === 0) {
+                seletor.innerHTML = '<option value="">Nenhum tema disponível no banco.</option>';
+                return;
+            }
+            
+            seletor.innerHTML = '<option value="">-- Clique aqui para selecionar um tema --</option>';
             listaDeTemas.forEach(tema => {
                 seletor.innerHTML += `<option value="${tema.id}">${tema.titulo}</option>`;
             });
         } catch (erro) {
             console.error("Erro ao buscar temas:", erro);
-            document.getElementById('seletor-temas').innerHTML = '<option value="">Erro ao carregar temas do servidor.</option>';
+            document.getElementById('seletor-temas').innerHTML = '<option value="">Erro ao conectar com o servidor Python.</option>';
         }
     }
 
-    // --- ATUALIZA TEXTO DE APOIO AO MUDAR O SELECT ---
+    // --- 3. ATUALIZAÇÃO VISUAL ---
     function atualizarTextosMotivadores() {
         const idSelecionado = document.getElementById('seletor-temas').value;
         const painel = document.getElementById('textos-motivadores');
@@ -93,20 +98,62 @@
         const temaEncontrado = listaDeTemas.find(t => t.id == idSelecionado);
         if (temaEncontrado) {
             painel.innerText = temaEncontrado.textos_motivadores;
-            botao.disabled = false; // Libera o botão de envio
+            botao.disabled = false; 
         }
     }
 
-    // --- CONTADOR DE LINHAS PEDAGÓGICO ---
+    // --- 4. CONTADOR DE LINHAS ---
     function contarLinhas() {
         const texto = document.getElementById('texto-redacao').value;
-        // Divide o texto quebrando por quebras de linha e limpa linhas vazias
         const linhas = texto.split('\n').filter(linha => linha.trim().length > 0).length;
         document.getElementById('contador-linhas').innerText = `Linhas estimadas: ${linhas} / Mínimo: 7`;
     }
 
-    // --- ENVIO DOS DADOS PARA O BACKEND ---
+    // --- 5. ENVIO PARA CORREÇÃO ---
     async function enviarRedacaoParaCorrigir() {
         const seletor = document.getElementById('seletor-temas');
         const tituloTema = seletor.options[seletor.selectedIndex].text;
-        const textoDigitado = document.getElementById('texto-redacao
+        const textoDigitado = document.getElementById('texto-redacao').value;
+        const botao = document.getElementById('btn-enviar-redacao');
+
+        if (textoDigitado.trim().length < 150) {
+            alert("Sua redação está muito curta! Desenvolva um pouco mais os seus argumentos antes de mandar corrigir.");
+            return;
+        }
+
+        botao.disabled = true;
+        botao.innerText = "🤖 OpenAI analisando suas competências... Aguarde...";
+
+        try {
+            const resposta = await fetch('http://localhost:5000/api/redacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuario_id: usuario.id,
+                    tema: tituloTema,
+                    texto: textoDigitado
+                })
+            });
+
+            const resultado = await resposta.json();
+
+            if (resposta.ok) {
+                alert(`🎉 Redação corrigida com sucesso!\nSua Nota: ${resultado.nota}/1000`);
+                window.location.href = 'perfil.html'; 
+            } else {
+                alert("Erro reportado pela IA: " + resultado.mensagem);
+                botao.disabled = false;
+                botao.innerText = "🚀 Enviar para Correção IA";
+            }
+        } catch (erro) {
+            alert("Erro crítico de comunicação com o servidor.");
+            botao.disabled = false;
+            botao.innerText = "🚀 Enviar para Correção IA";
+        }
+    }
+
+    // Inicializa a chamada automática de forma limpa
+    carregarTemasDoBanco();
+</script>
+</body>
+</html>
