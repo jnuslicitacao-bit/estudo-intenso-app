@@ -155,7 +155,7 @@ def salvar_simulado():
 
 @app.route('/api/redacao', methods=['POST'])
 def corrigir_redacao():
-    """Envia o texto para a OpenAI e vincula ao ID do usuário logado"""
+    """Envia o texto para a OpenAI, trata caracteres UTF-8 e vincula ao ID do usuário logado"""
     dados = request.get_json()
     texto_aluno = dados.get('texto')
     tema = dados.get('tema')
@@ -163,6 +163,10 @@ def corrigir_redacao():
     
     if not texto_aluno or not tema or not usuario_id:
         return jsonify({"status": "erro", "mensagem": "Dados incompletos."}), 400
+
+    # Garante que os textos recebidos sejam tratados como UTF-8 limpo
+    texto_aluno = texto_aluno.encode('utf-8', errors='ignore').decode('utf-8')
+    tema = tema.encode('utf-8', errors='ignore').decode('utf-8')
 
     prompt_sistema = "Você é um corretor especialista em redações dissertativo-argumentativas no modelo do ENEM. Avalie com rigor."
     prompt_usuario = f"""
@@ -187,7 +191,8 @@ def corrigir_redacao():
             temperature=0.3
         )
         
-        resposta_ia = resposta.choices[0].message.content
+        resposta_ia = resposta.choices[0].message.content.strip()
+        resposta_ia = resposta_ia.encode('utf-8', errors='ignore').decode('utf-8')
         
         try:
             linhas = resposta_ia.split('\n')
@@ -199,6 +204,21 @@ def corrigir_redacao():
 
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Garante a existência da tabela reestruturada com os tipos textuais corretos
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS redacoes (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                tema TEXT NOT NULL,
+                texto TEXT NOT NULL,
+                nota_final INT NOT NULL,
+                feedback_ia TEXT NOT NULL,
+                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
         cur.execute(
             "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
             (usuario_id, tema, texto_aluno, nota_final, feedback_real)
@@ -211,10 +231,11 @@ def corrigir_redacao():
             "status": "sucesso",
             "nota": nota_final,
             "feedback": feedback_real
-        })
+        }), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "mensagem": f"Falha na API da OpenAI: {str(e)}"}), 500
+        print(f"❌ ERRO CRÍTICO NA CORREÇÃO DE REDAÇÃO: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": f"Falha no processamento: {str(e)}"}), 500
 
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
