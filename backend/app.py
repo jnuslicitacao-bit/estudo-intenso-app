@@ -7,6 +7,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
@@ -18,75 +19,139 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_db_connection():
-    """Gerencia a conexão com o banco de dados PostgreSQL usando pg8000"""
-    return pg8000.dbapi.connect(
+    """Conecta ao banco PostgreSQL na Nuvem (Render) se a variável estiver ativa, ou usa o localhost"""
+    # Se você configurar a variável de ambiente no Windows/Render, ele usa a Nuvem.
+    # Caso contrário, substitua temporariamente a string abaixo com a "External Database URL" que você copiou!
+    url_nuvem = os.environ.get("DATABASE_URL") or "postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"
+    
+    if url_nuvem and url_nuvem.startswith("postgresql://"):
+        # Remove o prefixo para o pg8000 interpretar os dados da URL
+        limpa = url_nuvem.replace("postgresql://", "")
+        usuario_senha, resto = limpa.split("@")
+        usuario, senha = usuario_senha.split(":")
+        host_porta, banco = resto.split("/")
+        host, porta = host_porta.split(":") if ":" in host_porta else (host_porta, 5432)
+        
+        return pg8000.connect(
+            user=usuario,
+            password=senha,
+            host=host,
+            port=int(porta),
+            database=banco
+        )
+    
+    # Fallback de segurança para o banco local caso a URL não esteja configurada
+    return pg8000.connect(
+        user="postgres",
         host="localhost",
         database="estudo_intenso_db",
-        user="postgres",
-        password="nova_senha123"  # Sua senha atualizada
+        password="nova_senha123",
+        port=5432
     )
-
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
 # ==========================================
 
+
+
 @app.route('/api/cadastro', methods=['POST'])
 def cadastrar_usuario():
-    """Rota para registrar novos estudantes com senha criptografada"""
-    dados = request.get_json()
-    nome = dados.get('nome')
-    email = dados.get('email')
-    senha = dados.get('senha')
-
-    if not nome or not email or not senha:
-        return jsonify({"status": "erro", "mensagem": "Preencha todos os campos obrigatórios."}), 400
-
-    senha_criptografada = generate_password_hash(senha)
-
+    """Garante a criação da tabela de usuários no banco de dados e registra uma nova conta"""
     try:
+        dados = request.get_json()
+        if not dados:
+            print("❌ ERRO NO CADASTRO: Nenhum dado JSON foi recebido.")
+            return jsonify({"status": "erro", "mensagem": "Requisição inválida. Envie dados em formato JSON."}), 400
+            
+        nome = dados.get('nome')
+        email = dados.get('email')
+        senha = dados.get('senha')
+
+        # Log preventivo para ver o que está chegando (Sem expor a senha por segurança)
+        print(f"📥 Tentativa de cadastro recebida - Nome: {nome}, Email: {email}, Tem Senha: {bool(senha)}")
+
+        if not nome or not email or not senha:
+            return jsonify({"status": "erro", "mensagem": "Por favor, preencha todos os campos obrigatórios."}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # 1. Garante que a tabela exista com a estrutura esperada
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL UNIQUE,
+                senha VARCHAR(255) NOT NULL,
+                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 2. Verifica se o e-mail já não está cadastrado na nuvem
+        cur.execute("SELECT id FROM usuarios WHERE email = %s;", (email,))
+        if cur.fetchone():
+            cur.close()
+            conn.close()
+            return jsonify({"status": "erro", "mensagem": "Este e-mail já está sendo utilizado por outro estudante."}), 400
+
+        # 3. Cria o hash de segurança para a senha e insere no banco
+        senha_criptografada = generate_password_hash(senha)
         cur.execute(
-            "INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s, %s, %s) RETURNING id;",
+            "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s);",
             (nome, email, senha_criptografada)
         )
-        usuario_id = cur.fetchone()[0]
         conn.commit()
+        
         cur.close()
         conn.close()
-        
-        return jsonify({"status": "sucesso", "mensagem": "Usuário cadastrado com sucesso!", "usuario_id": usuario_id}), 201
-    except Exception:
-        return jsonify({"status": "erro", "mensagem": "Este e-mail já está cadastrado no sistema."}), 400
+        print(f"🎉 Usuário {nome} cadastrado com sucesso na Nuvem!")
+        return jsonify({"status": "sucesso", "mensagem": "Conta criada com sucesso!"}), 201
+
+    except Exception as e:
+        print(f"❌ ERRO CRÍTICO NO CADASTRO: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": f"Erro interno no servidor: {str(e)}"}), 500
 
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
-    """Rota para validar o acesso do estudante"""
-    dados = request.get_json()
-    email = dados.get('email')
-    senha = dados.get('senha')
+    """Valida as credenciais do usuário comparando o e-mail e o hash da senha"""
+    try:
+        dados = request.get_json()
+        email = dados.get('email')
+        senha = dados.get('senha')
 
-    if not email or not senha:
-        return jsonify({"status": "erro", "mensagem": "E-mail e senha são obrigatórios."}), 400
+        if not email or not senha:
+            return jsonify({"status": "erro", "mensagem": "Preencha e-mail e senha."}), 400
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, nome, senha_hash FROM usuarios WHERE email = %s;", (email,))
-    usuario = cur.fetchone()
-    cur.close()
-    conn.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 🌟 CORRIGIDO: Mudamos de 'senha_hash' para 'senha' para bater com a tabela criada
+        cur.execute("SELECT id, nome, senha FROM usuarios WHERE email = %s;", (email,))
+        usuario_encontrado = cur.fetchone()
+        
+        cur.close()
+        conn.close()
 
-    if usuario and check_password_hash(usuario[2], senha):
-        return jsonify({
-            "status": "sucesso",
-            "usuario": {
-                "id": usuario[0],
-                "nome": usuario[1],
-                "email": email
-            }
-        }), 200
-    else:
-        return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
+        if not usuario_encontrado:
+            return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
+
+        # usuario_encontrado[2] contém a senha criptografada vinda do banco
+        from werkzeug.security import check_password_hash
+        if check_password_hash(usuario_encontrado[2], senha):
+            return jsonify({
+                "status": "sucesso",
+                "usuario": {
+                    "id": usuario_encontrado[0],
+                    "nome": usuario_encontrado[1]
+                }
+            }), 200
+        else:
+            return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
+
+    except Exception as e:
+        print(f"❌ ERRO CRÍTICO NO LOGIN: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
 # ==========================================
@@ -130,27 +195,97 @@ def obter_questoes():
     
 @app.route('/api/simulado/salvar', methods=['POST'])
 def salvar_simulado():
-    """Registra a pontuação real do estudante após concluir um simulado"""
-    dados = request.get_json()
-    usuario_id = dados.get('usuario_id')
-    materia = dados.get('materia')
-    nota = dados.get('nota')
-
-    if not usuario_id or not materia or nota is None:
-        return jsonify({"status": "erro", "mensagem": "Dados incompletos para salvar."}), 400
-
+    """Garante a criação da tabela de histórico e salva o desempenho do aluno na nuvem"""
     try:
+        dados = request.get_json()
+        usuario_id = dados.get('usuario_id')
+        materia = dados.get('materia', 'Geral')
+        nota = dados.get('nota', 0)
+
+        if not usuario_id:
+            return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # 1. Garante que a tabela de histórico exista na nuvem do Render
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS simulados_realizados (
+                id SERIAL PRIMARY KEY,
+                usuario_id INTEGER NOT NULL,
+                materia VARCHAR(100) NOT NULL,
+                nota INTEGER NOT NULL,
+                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 2. Insere a nota do simulado que o aluno acabou de fazer
         cur.execute(
-            "INSERT INTO simulados_historico (usuario_id, materia, nota) VALUES (%s, %s, %s);",
+            """INSERT INTO simulados_realizados (usuario_id, materia, nota) 
+               VALUES (%s, %s, %s);""",
             (usuario_id, materia, nota)
         )
         conn.commit()
+        
         cur.close()
         conn.close()
-        return jsonify({"status": "sucesso", "mensagem": "Resultado do simulado salvo!"}), 201
+        print(f"📊 Nota {nota}% em {materia} salva com sucesso na nuvem!")
+        return jsonify({"status": "sucesso", "mensagem": "Resultado salvo com sucesso!"}), 201
+
     except Exception as e:
+        print(f"❌ ERRO AO SALVAR SIMULADO: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+
+@app.route('/api/simulados/historico', methods=['GET'])
+def obter_historico_simulados():
+    """Busca os últimos desempenhos salvos na nuvem para o usuário especificado"""
+    try:
+        usuario_id = request.args.get('usuario_id')
+        if not usuario_id:
+            return jsonify({"status": "erro", "mensagem": "ID do usuário é obrigatório."}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Garante a existência da tabela para evitar erros de 'relation does not exist' caso seja a primeira consulta
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS simulados_realizados (
+                id SERIAL PRIMARY KEY,
+                usuario_id INTEGER NOT NULL,
+                materia VARCHAR(100) NOT NULL,
+                nota INTEGER NOT NULL,
+                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # Busca os 4 simulados mais recentes do estudante
+        cur.execute("""
+            SELECT materia, nota 
+            FROM simulados_realizados 
+            WHERE usuario_id = %s 
+            ORDER BY data_realizacao DESC 
+            LIMIT 4;
+        """, (usuario_id,))
+        
+        resultados = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Formata a resposta para o formato que o frontend espera consumir
+        historico = []
+        for r in resultados:
+            historico.append({
+                "materia": r[0],
+                "nota": r[1]
+            })
+
+        return jsonify(historico), 200
+
+    except Exception as e:
+        print(f"❌ ERRO AO BUSCAR HISTÓRICO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route('/api/redacao', methods=['POST'])
@@ -420,12 +555,12 @@ def status_sistema():
 
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
-    """IA gera novos pacotes de simulados gerais e o backend limpa e salva com segurança"""
+    """IA gera novos pacotes de simulados gerais e alimenta o banco na nuvem com chaves tratadas"""
     try:
         prompt = """
         Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
         Retorne estritamente em formato JSON puro (um array de objetos), sem usar blocos de código markdown (não coloque ```json no início).
-        Use a estrutura:
+        Use a estrutura EXATA:
         [
           {"materia": "Matemática", "enunciado": "...", "opcoes": {"A": "..", "B": "..", "C": "..", "D": "..", "E": ".."}, "correta": "A"}
         ]
@@ -433,44 +568,74 @@ def atualizar_sistema():
         resposta = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+            temperature=0.5
         )
         
         texto_resposta = resposta.choices[0].message.content.strip()
-        
-        # 🛡️ TRATAMENTO DE SEGURANÇA: Remove possíveis marcações de markdown injetadas pela IA
         if texto_resposta.startswith("```json"):
             texto_resposta = texto_resposta.replace("```json", "", 1)
         if texto_resposta.endswith("```"):
             texto_resposta = texto_resposta[:-3]
         texto_resposta = texto_resposta.strip()
 
-        # Converte a string tratada para um objeto array do Python
         questoes = json.loads(texto_resposta)
         
-        # ... dentro de def atualizar_sistema():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 1. Garante que a tabela 'questoes' exista com tipos de texto longos
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS questoes (
+                id SERIAL PRIMARY KEY,
+                materia VARCHAR(100) NOT NULL,
+                enunciado TEXT NOT NULL,
+                alternativa_a TEXT NOT NULL,
+                alternativa_b TEXT NOT NULL,
+                alternativa_c TEXT NOT NULL,
+                alternativa_d TEXT NOT NULL,
+                alternativa_e TEXT NOT NULL,
+                resposta_correta VARCHAR(2) NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 2. Garante que a tabela 'controle_atualizacao' exista
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                id SERIAL PRIMARY KEY,
+                ultima_atualizacao TIMESTAMP NOT NULL
+            );
+        """)
+        conn.commit()
+        
+        # 3. Faz a inserção tratando de forma tolerante as chaves das opções
         for q in questoes:
-            # Incluímos a coluna 'resposta_correta' e passamos o 'q['correta']' no final
+            opc = q.get('opcoes', {})
+            # Tratamento tolerante para aceitar chaves maiúsculas ou minúsculas da IA
+            alt_a = opc.get('A') or opc.get('a') or 'Alternativa A'
+            alt_b = opc.get('B') or opc.get('b') or 'Alternativa B'
+            alt_c = opc.get('C') or opc.get('c') or 'Alternativa C'
+            alt_d = opc.get('D') or opc.get('d') or 'Alternativa D'
+            alt_e = opc.get('E') or opc.get('e') or 'Alternativa E'
+            correta = q.get('correta') or q.get('resposta_correta') or 'A'
+
             cur.execute(
                 """INSERT INTO questoes (materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, resposta_correta) 
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);""",
-                (q['materia'], q['enunciado'], q['opcoes']['A'], q['opcoes']['B'], q['opcoes']['C'], q['opcoes']['D'], q['opcoes']['E'], q['correta'])
+                (q.get('materia', 'Geral'), q.get('enunciado'), alt_a, alt_b, alt_c, alt_d, alt_e, str(correta).upper())
             )
             
-        # Registra o momento exato da atualização para revalidar os 2 dias
+        # Grava a marca temporal de controle
         cur.execute("INSERT INTO controle_atualizacao (ultima_atualizacao) VALUES (%s);", (datetime.now(),))
-        # ... continua o código igual
         conn.commit()
         cur.close()
         conn.close()
         
+        print("🎉 Sincronização e carga de questões efetuadas com sucesso na Nuvem!")
         return jsonify({"status": "sucesso", "mensagem": "Banco de dados alimentado com sucesso!"}), 200
-        
+
     except Exception as e:
-        # Se der erro, printa o motivo real no terminal para sabermos exatamente o que houve
         print(f"❌ ERRO CRÍTICO NA ATUALIZAÇÃO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
@@ -550,6 +715,9 @@ def comentar_questao_ia():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
+
+
 if __name__ == '__main__':
-    # Mantido desativado (debug=False) para evitar erros do Watchdog no Windows
-    app.run(debug=False, port=5000)
+    # O Render injeta a variável PORT automaticamente. Se não houver, usa a 5000 (local)
+    porta = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=porta)
