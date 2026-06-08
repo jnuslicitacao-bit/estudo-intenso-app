@@ -15,6 +15,7 @@
             --card-bg: #ffffff;
             --border-color: #e2e8f0;
             --success: #10b981;
+            --danger: #ef4444;
         }
 
         body {
@@ -26,29 +27,43 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* BARRA SUPERIOR DE STATUS */
+        /* BARRA SUPERIOR DE STATUS CRÍTICO */
         .top-sync-bar {
             background-color: #ecfdf5;
             border-bottom: 1px solid #a7f3d0;
-            padding: 10px 20px;
+            padding: 12px 20px;
             font-size: 14px;
             font-weight: 500;
             color: #065f46;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s ease;
         }
+        
+        /* Estado quando o sistema detecta pacotes expirados */
+        .top-sync-bar.desatualizado {
+            background-color: #fef2f2;
+            border-bottom: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
         .btn-update-top {
-            background: #ef4444;
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             font-size: 13px;
             transition: 0.2s;
         }
+        
+        .top-sync-bar.desatualizado .btn-update-top {
+            background: var(--danger);
+        }
+
         .btn-update-top:disabled {
             background: #cbd5e1;
             color: #94a3b8;
@@ -241,14 +256,14 @@
             font-weight: 500;
             font-size: 14px;
         }
-        .btn-logout-footer:hover { color: #ef4444; }
+        .btn-logout-footer:hover { color: var(--danger); }
     </style>
 </head>
 <body>
 
     <div id="barra-status" class="top-sync-bar">
         <span id="texto-status">🔍 Sincronizando dados com o servidor...</span>
-        <button id="btn-sincronizar" class="btn-update-top" onclick="forcarAtualizacaoSistema()" disabled>🔄 Atualizar Conteúdos</button>
+        <button id="btn-sincronizar" class="btn-update-top" onclick="forcarAtualizacaoSistema()" disabled>🔄 Verificar Banco</button>
     </div>
 
     <header>
@@ -324,51 +339,61 @@
 
     // --- LOGICA DE ATUALIZAÇÃO DO BANCO (2 DIAS) ---
     async function checarStatusDoSistema() {
-        try {
-            const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/status`);
-            const dados = await r.json();
-            
-            const barra = document.getElementById('barra-status');
-            const texto = document.getElementById('texto-status');
-            const botao = document.getElementById('btn-sincronizar');
+        const barra = document.getElementById('barra-status');
+        const texto = document.getElementById('texto-status');
+        const botao = document.getElementById('btn-sincronizar');
 
-            if (dados.status === "desatualizado") {
-                barra.style.backgroundColor = "#fef2f2";
-                barra.style.borderColor = "#fca5a5";
-                barra.style.color = "#991b1b";
-                texto.innerHTML = `⚠️ <strong>Aviso:</strong> Seus pacotes de matérias locais expiraram. Há novidades da inteligência de dados prontas para carregar!`;
-                botao.disabled = false;
-            } else {
-                barra.style.backgroundColor = "#ecfdf5";
-                barra.style.borderColor = "#a7f3d0";
-                barra.style.color = "#065f46";
-                texto.innerHTML = `✅ <strong>Sistema Sincronizado:</strong> Inteligência e tecnologia rodando na última versão estável.`;
-                botao.disabled = true;
+        try {
+            const resposta = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/status`);
+            
+            if (!resposta.ok) {
+                throw new Error(`Erro no servidor: Status ${resposta.status}`);
             }
-        } catch (e) {
-            console.error("Erro ao verificar integridade do sistema.", e);
+
+            const dados = await resposta.json();
+            
+            if (dados.status === 'desatualizado') {
+                barra.classList.add('desatualizado');
+                texto.innerText = "⚠️ Seus pacotes locais expiram ou nunca foram carregados. Há novidades prontas!";
+                botao.disabled = false;
+                botao.innerText = "🔄 Atualizar Conteúdos";
+            } else {
+                barra.classList.remove('desatualizado');
+                texto.innerText = `✅ Sistema otimizado. Último sincronismo da IA: ${dados.ultima}`;
+                botao.disabled = true;
+                botao.innerText = "🚀 Banco Atualizado";
+            }
+        } catch (erro) {
+            console.error("❌ Falha ao checar status:", erro);
+            texto.innerText = "❌ Erro ao verificar sincronismo do banco.";
         }
     }
 
     async function forcarAtualizacaoSistema() {
         const botao = document.getElementById('btn-sincronizar');
+        const texto = document.getElementById('texto-status');
+        
         botao.disabled = true;
-        botao.innerText = "Carregando novos pacotes...";
+        botao.innerText = "⚡ Sincronizando com a IA...";
+        texto.innerText = "Aguarde, injetando pacotes inéditos de dados no Render...";
 
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/atualizar`, { method: 'POST' });
+            const dados = await r.json();
+
             if (r.ok) {
-                alert("🎉 Banco de dados atualizado com sucesso!");
-                checarStatusDoSistema();
+                alert("🎉 Banco de dados na nuvem alimentado com sucesso com questões da IA!");
+                window.location.reload();
             } else {
-                alert("Falha no sincronismo secundário.");
+                alert(`Falha no sincronismo secundário: ${dados.detalhe_real_do_erro || 'Erro interno'}`);
                 botao.disabled = false;
-                botao.innerText = "🔄 Atualizar Conteúdos";
+                botao.innerText = "🔄 Tentar Novamente";
             }
         } catch (e) {
+            console.error("Erro crítico de rede:", e);
             alert("Erro crítico ao acionar ecossistema de rede.");
             botao.disabled = false;
-            botao.innerText = "🔄 Atualizar Conteúdos";
+            botao.innerText = "🔄 Tentar Novamente";
         }
     }
 
@@ -376,6 +401,7 @@
     async function carregarInsightsDoEstudante() {
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/insights?usuario_id=${usuario.id}`);
+            if (!r.ok) throw new Error();
             const dados = await r.json();
             document.getElementById('painel-insight').innerText = dados.insight;
         } catch (e) {
@@ -390,11 +416,11 @@
 
     // --- CARREGAMENTO DO HISTÓRICO DE NOTAS DA NUVEM ---
     async function carregarResultadosLocais() {
+        const container = document.getElementById('lista-resultados-locais');
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/simulados/historico?usuario_id=${usuario.id}`);
+            if (!r.ok) throw new Error();
             const dados = await r.json();
-            
-            const container = document.getElementById('lista-resultados-locais');
             
             if (!Array.isArray(dados) || dados.length === 0) {
                 container.innerHTML = `
@@ -405,7 +431,6 @@
                 return;
             }
 
-            // Limpa o esqueleto padrão e renderiza os dados reais da nuvem
             container.innerHTML = '';
             dados.forEach(item => {
                 container.innerHTML += `
@@ -417,19 +442,18 @@
             });
         } catch (e) {
             console.error("Erro ao puxar histórico do Render:", e);
-            document.getElementById('lista-resultados-locais').innerHTML = `
+            container.innerHTML = `
                 <div class="resultado-item">
-                    <span class="materia-nome" style="color: #ef4444;">Erro de conexão</span>
+                    <span class="materia-nome" style="color: var(--danger);">Erro de conexão</span>
                     <span class="nota-badge">--</span>
                 </div>`;
         }
     }
 
-    // Chame a função na inicialização do arquivo (no final da tag <script>)
+    // Inicialização automática das rotas integradas
     checarStatusDoSistema();
     carregarInsightsDoEstudante();
-    carregarResultadosLocais(); // 🌟 Ativa a busca ao abrir a página
-
+    carregarResultadosLocais();
 </script>
 </body>
 </html>
