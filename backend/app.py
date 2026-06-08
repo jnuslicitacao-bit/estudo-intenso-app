@@ -553,10 +553,11 @@ def status_sistema():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-@app.route('/api/sistema/atualizar', methods=['POST'])
+@app.route('/api/sistema/atualizar', methods=['POST']) # 🌟 Garanta que está exatamente assim!
 def atualizar_sistema():
-    """IA gera novos pacotes de simulados gerais e alimenta o banco na nuvem com chaves tratadas"""
+    """IA gera novos pacotes de simulados gerais para alimentar o banco de dados na nuvem"""
     try:
+        # ... (todo o resto do seu código de atualização permanece igual)
         prompt = """
         Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
         Retorne estritamente em formato JSON puro (um array de objetos), sem usar blocos de código markdown (não coloque ```json no início).
