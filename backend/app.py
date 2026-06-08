@@ -715,7 +715,47 @@ def comentar_questao_ia():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-
+@app.route('/api/sistema/status', methods=['GET'])
+def checar_status():
+    """Verifica se os pacotes de matérias do banco na nuvem expiraram (Validade: 2 dias)"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Garante que a tabela de controle exista na nuvem do Render
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                id SERIAL PRIMARY KEY,
+                ultima_atualizacao TIMESTAMP NOT NULL
+            );
+        """)
+        conn.commit()
+        
+        # 2. Busca o último registro de atualização
+        cur.execute("SELECT ultima_atualizacao FROM controle_atualizacao ORDER BY id DESC LIMIT 1;")
+        registro = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        # Se o banco acabou de ser criado e não tem nenhuma carga da IA ainda
+        if not registro:
+            return jsonify({
+                "status": "desatualizado", 
+                "ultima": "Nunca atualizado",
+                "mensagem": "O banco na nuvem está pronto, mas aguarda a primeira carga de matérias da IA."
+            }), 200
+            
+        ultima_data = registro[0]
+        # Calcula se já se passaram mais de 2 dias (48 horas)
+        if datetime.now() - ultima_data > timedelta(days=2):
+            return jsonify({"status": "desatualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
+        else:
+            return jsonify({"status": "atualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
+            
+    except Exception as e:
+        print(f"❌ ERRO NA ROTA DE STATUS: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": f"Erro de comunicação interna com o banco: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # O Render injeta a variável PORT automaticamente. Se não houver, usa a 5000 (local)
