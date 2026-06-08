@@ -45,6 +45,42 @@ def get_db_connection():
             port=5432,
             database="estudo_intensivo_db"
         )
+    
+def inicializar_banco():
+    """Garante que as tabelas necessárias existam no PostgreSQL do Render"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Tabela de controle de sincronismo
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                id SERIAL PRIMARY KEY,
+                ultima_atualizacao TIMESTAMP NOT EXISTS DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        
+        # 2. Tabela de simulados (Histórico)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS simulados (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT,
+                materia VARCHAR(100),
+                nota INT,
+                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Tabelas verificadas/criadas com sucesso no banco remoto!")
+    except Exception as e:
+        print(f"❌ Erro ao inicializar tabelas: {str(e)}")
+
+# Chame a função logo após definir o app do Flask para rodar no deploy
+inicializar_banco()
+
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
 # ==========================================
