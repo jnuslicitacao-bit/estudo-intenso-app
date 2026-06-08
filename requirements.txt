@@ -4,3 +4,4 @@ openai==1.13.3
 pg8000==1.30.5
 gunicorn==21.2.0
 werkzeug==3.0.1
+python-dotenv==1.0.1
