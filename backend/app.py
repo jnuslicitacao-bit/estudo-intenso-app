@@ -754,8 +754,15 @@ def checar_status():
             return jsonify({"status": "atualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
             
     except Exception as e:
-        print(f"❌ ERRO NA ROTA DE STATUS: {str(e)}")
-        return jsonify({"status": "erro", "mensagem": f"Erro de comunicação interna com o banco: {str(e)}"}), 500
+        # Isso vai imprimir o erro real nos Logs do Render
+        print(f"❌ ERRO DETECTADO NO SERVIDOR: {str(e)}")
+        
+        # 🌟 ISSO VAI ENVIAR O ERRO REAL PARA A TELA DO SEU CHROME!
+        return jsonify({
+            "status": "erro", 
+            "mensagem": "Erro interno no servidor.",
+            "detalhe_real_do_erro": str(e)
+        }), 500
 
 if __name__ == '__main__':
     # O Render injeta a variável PORT automaticamente. Se não houver, usa a 5000 (local)
