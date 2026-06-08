@@ -18,36 +18,33 @@ CORS(app)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+import os
+import pg8000
+
 def get_db_connection():
-    """Conecta ao banco PostgreSQL na Nuvem (Render) se a variável estiver ativa, ou usa o localhost"""
-    # Se você configurar a variável de ambiente no Windows/Render, ele usa a Nuvem.
-    # Caso contrário, substitua temporariamente a string abaixo com a "External Database URL" que você copiou!
-    url_nuvem = os.environ.get("DATABASE_URL") or "postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"
+    """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
+    # 🌟 O segredo está aqui: tenta ler a variável que você configurou no painel
+    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
     
-    if url_nuvem and url_nuvem.startswith("postgresql://"):
-        # Remove o prefixo para o pg8000 interpretar os dados da URL
-        limpa = url_nuvem.replace("postgresql://", "")
-        usuario_senha, resto = limpa.split("@")
-        usuario, senha = usuario_senha.split(":")
-        host_porta, banco = resto.split("/")
-        host, porta = host_porta.split(":") if ":" in host_porta else (host_porta, 5432)
-        
+    if database_url:
+        try:
+            # O Render fornece a URL no padrão 'postgresql://user:pass@host:port/db'
+            # O pg8000 aceita a string de conexão direta usando o método from_url
+            conn = pg8000.connect(dsn=database_url)
+            return conn
+        except Exception as e:
+            print(f"❌ Erro ao conectar na URL de Produção: {str(e)}")
+            raise e
+    else:
+        # 💻 Caso você esteja rodando no seu computador (Sem DATABASE_URL)
+        print("💻 Conectando ao Banco Local (Ambiente de Desenvolvimento)")
         return pg8000.connect(
-            user=usuario,
-            password=senha,
-            host=host,
-            port=int(porta),
-            database=banco
+            user="administrador",
+            password="SuaSenhaLocalAqui",
+            host="localhost",
+            port=5432,
+            database="estudo_intensivo_db"
         )
-    
-    # Fallback de segurança para o banco local caso a URL não esteja configurada
-    return pg8000.connect(
-        user="postgres",
-        host="localhost",
-        database="estudo_intenso_db",
-        password="nova_senha123",
-        port=5432
-    )
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
 # ==========================================
