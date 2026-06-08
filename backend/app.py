@@ -762,6 +762,12 @@ def checar_status():
             "detalhe_real_do_erro": str(e)
         }), 500
 
+# 🟢 1. Coloque a rota raiz AQUI (Antes do IF)
+@app.route('/')
+def home():
+    return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
+
+# 🟡 2. O bloco IF deve ser a ÚLTIMA coisa do arquivo
 if __name__ == '__main__':
     # O Render injeta a variável PORT automaticamente. Se não houver, usa a 5000 (local)
     porta = int(os.environ.get("PORT", 5000))
