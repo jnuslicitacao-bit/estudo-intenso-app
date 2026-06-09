@@ -102,6 +102,52 @@
             background: var(--primary-hover);
         }
 
+        /* 🌐 BOTÃO GOOGLE SOCIAL LOGIN */
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background-color: #ffffff;
+            color: #1f2937;
+            border: 1px solid #cbd5e1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            margin-top: 15px;
+            box-sizing: border-box;
+        }
+
+        .btn-google:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .btn-google img {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+
+        .divisoria {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            margin: 20px 0;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .divisoria::before, .divisoria::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+        .divisoria:not(:empty)::before { margin-right: 1em; }
+        .divisoria:not(:empty)::after { margin-left: 1em; }
+
         .footer-links {
             text-align: center;
             margin-top: 25px;
@@ -118,23 +164,24 @@
         .footer-links a:hover {
             text-decoration: underline;
         }
-        /* 📱 Responsividade para o Login */
-@media (max-width: 480px) {
-    body {
-        align-items: flex-start;
-        padding: 20px;
-        background-color: white;
-    }
-    .auth-card {
-        padding: 25px 20px;
-        box-shadow: none;
-        border-radius: 0;
-    }
-    input, .btn-auth {
-        padding: 14px;
-        font-size: 16px; /* Impede zoom no iPhone */
-    }
-}
+
+        /* 📱 Responsividade Mobile Corrigida */
+        @media (max-width: 480px) {
+            body {
+                align-items: flex-start;
+                padding: 20px;
+                background-color: white;
+            }
+            .login-container {
+                padding: 25px 5px;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .form-group input, .btn-submit, .btn-google {
+                padding: 14px;
+                font-size: 16px; /* Evita zoom automático no iOS */
+            }
+        }
     </style>
 </head>
 <body>
@@ -155,13 +202,20 @@
 
     <button class="btn-submit" onclick="executarLogin()">Entrar no Sistema →</button>
 
+    <div class="divisoria">ou conecte-se com</div>
+
+    <button type="button" class="btn-google" onclick="autenticarComGoogle()">
+        <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" alt="Google Logo">
+        Entrar com o Google
+    </button>
+
     <div class="footer-links">
         Não tem uma conta? <a href="cadastro.html">Cadastre-se aqui</a>
     </div>
 </div>
 
 <script>
-    async function executarLogin() {
+    async function ejecutarLogin() {
         const email = document.getElementById('email').value.trim();
         const senha = document.getElementById('senha').value;
 
@@ -188,6 +242,11 @@
         } catch (erro) {
             alert("Erro crítico de comunicação com o servidor.");
         }
+    }
+
+    function autenticarComGoogle() {
+        const callbackUrl = `${CONFIG.URL_BACKEND}/api/auth/callback`;
+        window.location.href = `${CONFIG.URL_BACKEND}/api/auth/google?redirect_uri=${encodeURIComponent(callbackUrl)}`;
     }
 </script>
 </body>

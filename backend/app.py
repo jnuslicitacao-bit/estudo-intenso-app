@@ -7,6 +7,7 @@ import psycopg2
 from openai import OpenAI
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
 
 # 🌟 SÓ CARREGA O .ENV SE ESTIVER LOCALMENTE (Impede o bug de apagar as variáveis no Render)
 if not os.environ.get("RENDER"):
@@ -14,11 +15,23 @@ if not os.environ.get("RENDER"):
     load_dotenv()
 
 app = Flask(__name__)
+# É altamente recomendável ter uma secret key definida para sessões estáveis do OAuth
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 CORS(app)
 
 # Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+# Configuração do OAuth do Google unificada no escopo inicial do app
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID", "SEU_CLIENT_ID_AQUI"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "SUA_CHAVE_SECRETA_AQUI"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 
 def get_db_connection():
@@ -459,6 +472,9 @@ def obter_questoes_ia():
 def corrigir_redacao():
     """Corrige a redação E gera um modelo de estrutura Nota 1000 focado no tema"""
     dados = request.get_json()
+    if not dados:
+        return jsonify({"status": "erro", "mensagem": "Dados não recebidos."}), 400
+
     texto_aluno = dados.get('texto')
     tema = dados.get('tema')
     usuario_id = dados.get('usuario_id')
@@ -495,7 +511,7 @@ def corrigir_redacao():
         )
         
         resposta_ia = resposta.choices[0].message.content.strip()
-        print(f"DEBUG - Resposta Bruta da IA: {resposta_ia}")  # Ajuda a ver o que a IA mandou no log do Render
+        print(f"DEBUG - Resposta Bruta da IA: {resposta_ia}")
 
         # 🛡️ FILTRO EXTRATOR AVANÇADO: Encontra o JSON mesmo se a IA colocar lixo ao redor
         start_idx = resposta_ia.find('{')
@@ -724,6 +740,82 @@ def comentar_questao_ia():
 
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+
+# ==========================================
+# ROTAS DO SISTEMA DE LOGIN SOCIAL (GOOGLE OAuth)
+# ==========================================
+
+@app.route('/api/auth/google')
+def login_google():
+    """Redireciona o usuário para a tela de login do Google"""
+    redirect_uri = request.args.get('redirect_uri')
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route('/api/auth/callback')
+def auth_callback():
+    """Recebe a resposta de sucesso do Google, cria ou loga o usuário no Postgres"""
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            return "Erro ao obter dados do perfil do Google", 400
+            
+        email = user_info.get('email')
+        nome = user_info.get('name')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Garante a existência da tabela de usuários antes da checagem
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL UNIQUE,
+                senha VARCHAR(255) NOT NULL,
+                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+        
+        # Verifica se o usuário já existe na sua tabela atual
+        cur.execute("SELECT id, nome FROM usuarios WHERE email = %s;", (email,))
+        usuario_existente = cur.fetchone()
+        
+        if usuario_existente:
+            user_id = usuario_existente[0]
+            user_nome = usuario_existente[1]
+        else:
+            # Se for o primeiro acesso, registra ele automaticamente no banco com uma senha aleatória estável
+            senha_aleatoria = generate_password_hash(os.urandom(24).hex())
+            cur.execute(
+                "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s) RETURNING id;",
+                (nome, email, senha_aleatoria)
+            )
+            user_id = cur.fetchone()[0]
+            user_nome = nome
+            conn.commit()
+            
+        cur.close()
+        conn.close()
+        
+        # Transmite os dados de login de volta para o seu Frontend via parâmetros na URL de sucesso
+        frontend_url = "http://127.0.0.1:5500/frontend/index.html" 
+        if os.environ.get("RENDER"):
+            frontend_url = "https://seu-frontend-no-render.com/index.html" # Altere para a sua URL real de produção
+            
+        return f"""
+        <script>
+            localStorage.setItem('usuario_estudo', JSON.stringify({{ id: {user_id}, nome: '{user_nome}' }}));
+            window.location.href = '{frontend_url}';
+        </script>
+        """
+    except Exception as e:
+        print(f"❌ ERRO NO CALLBACK DO GOOGLE: {str(e)}")
+        return f"Falha na autenticação: {str(e)}", 500
 
 
 @app.route('/')
