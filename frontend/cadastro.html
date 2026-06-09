@@ -37,7 +37,7 @@
 </div>
 
 <script>
-    async function executarCadastro() {
+    async function ejecutarCadastro() {
         const nome = document.getElementById('nome').value.trim();
         const email = document.getElementById('email').value.trim();
         const senha = document.getElementById('senha').value;
@@ -48,7 +48,8 @@
         }
 
         try {
-            const resposta = await fetch('fetch("https://estudo-intensivo-backend.onrender.com/api/cadastro", { // ✅ Rota completa e correta', {
+            // 🌟 Corrigido aqui: Deixamos apenas a string pura com o link correto do seu Render backend
+            const resposta = await fetch('https://estudo-intensivo-backend.onrender.com/api/cadastro', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, email, senha })
@@ -60,9 +61,10 @@
                 alert("🎉 Conta criada com sucesso! Você será redirecionado para a tela de login.");
                 window.location.href = 'login.html';
             } else {
-                alert("Erro ao cadastrar: " + dados.mensagem);
+                alert("Erro ao cadastrar: " + (dados.mensagem || "Erro desconhecido"));
             }
         } catch (erro) {
+            console.error("Erro detalhado do servidor:", erro);
             alert("Erro crítico ao conectar com o servidor.");
         }
     }
