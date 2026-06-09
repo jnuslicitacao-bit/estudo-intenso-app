@@ -29,11 +29,13 @@
         }
 
         .container {
+            width: 100%;
             max-width: 850px;
             background: var(--card-bg);
             padding: 40px;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
             margin: auto;
         }
 
@@ -67,6 +69,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            gap: 15px;
         }
         .timer-title { font-weight: 600; color: var(--text-main); font-size: 15px; }
         .timer-clock { font-size: 26px; font-weight: 700; font-family: monospace; color: var(--text-main); }
@@ -80,6 +83,7 @@
             cursor: pointer;
             font-weight: 600;
             transition: background 0.2s;
+            white-space: nowrap;
         }
 
         /* PAINEL DE SELEÇÃO */
@@ -96,7 +100,7 @@
         input[type="text"], select {
             width: 100%;
             padding: 12px;
-            font-size: 15px;
+            font-size: 16px; /* 🌟 Previne zoom nativo indesejado no iOS */
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-sizing: border-box;
@@ -149,15 +153,15 @@
         .divisoria:not(:empty)::after { margin-left: 1em; }
 
         /* INTERFACE DE QUESTÕES */
-        .materia-tag { background: var(--primary-light); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .materia-tag { background: var(--primary-light); color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
         .enunciado-text { font-size: 18px; line-height: 1.6; color: var(--text-main); margin: 25px 0; font-weight: 500; }
         
         .btn-opcao {
             display: block;
             width: 100%;
             text-align: left;
-            padding: 14px 20px;
-            margin: 10px 0;
+            padding: 16px 20px; /* Expandido para clique confortável via touch */
+            margin: 12px 0;
             background: #fff;
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -165,6 +169,7 @@
             font-size: 15px;
             color: var(--text-main);
             transition: all 0.2s;
+            box-sizing: border-box;
         }
         .btn-opcao:hover { background: #f8fafc; border-color: #cbd5e1; }
         .btn-opcao.selecionada { background: var(--primary); color: white; border-color: var(--primary-hover); }
@@ -173,7 +178,7 @@
             background: var(--success);
             color: white;
             border: none;
-            padding: 14px 24px;
+            padding: 16px 24px;
             border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
@@ -188,17 +193,58 @@
         .btn-comment-ia {
             border: none;
             color: white;
-            padding: 6px 12px;
+            padding: 10px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             font-size: 13px;
-            margin-top: 8px;
+            margin-top: 12px;
             background: #8b5cf6;
             transition: background 0.2s;
+            width: 100%; /* Ocupa largura total no mobile para melhor clique */
+            text-align: center;
         }
         .btn-comment-ia:hover { background: #7c3aed; }
         .btn-comment-ia:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* 📱 DESIGN RESPONSIVO INTERNO MÓVEL */
+        @media (max-width: 650px) {
+            body {
+                padding: 15px 10px;
+            }
+            
+            .container {
+                padding: 20px 15px;
+                border-radius: 12px;
+            }
+
+            .pomodoro-box {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+                gap: 12px;
+            }
+            
+            .btn-timer-action {
+                width: 100%;
+            }
+
+            .enunciado-text {
+                font-size: 16px;
+            }
+
+            .btn-opcao {
+                padding: 14px 16px;
+                font-size: 14px;
+            }
+            
+            /* Ajustes no cabeçalho das questões para não esmagar */
+            div[style*="display: flex; justify-content: space-between;"] {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -256,7 +302,7 @@
     </div>
 
     <div id="bloco-revisao-gabarito" style="display: none; margin-top: 25px;">
-        <h2 style="color: var(--success); font-size: 24px; font-weight: 700; margin-bottom: 10px;">🏁 Caderno Avaliado com Sucesso!</h2>
+        <h2 style="color: var(--success); font-size: 24px; font-weight: 700; margin-bottom: 10px;">🏁 Caderno Evaluado com Sucesso!</h2>
         <div id="card-resultado-pontos" style="background: #f1f5f9; padding: 20px; border-radius: 10px; font-size: 16px; font-weight: 700; margin-bottom: 30px; text-align: center; border: 1px solid var(--border-color);"></div>
         
         <h3 style="font-size: 18px; margin-bottom: 15px;">🔍 Espelho de Correção Pedagógica</h3>
@@ -308,13 +354,13 @@
                         emModoFoco = false;
                         tempoRestante = 5 * 60;
                         document.getElementById('tipo-timer').innerText = "Descanso";
-                        document.getElementById('tipo-timer').style.color = "#10b981"; // 🍏 Cor Verde (Success)
+                        document.getElementById('tipo-timer').style.color = "#10b981"; 
                     } else {
                         alert("💪 Descanso terminado! Hora de focar de novo.");
                         emModoFoco = true;
                         tempoRestante = 25 * 60;
                         document.getElementById('tipo-timer').innerText = "Focar!";
-                        document.getElementById('tipo-timer').style.color = "#ef4444"; // 🍎 Cor Vermelha (Danger)
+                        document.getElementById('tipo-timer').style.color = "#ef4444"; 
                     }
                     atualizarDisplayTimer();
                     btn.innerText = "Iniciar Foco";
@@ -451,7 +497,7 @@
                 const escolheuCerto = respostasAluno[i] === gabarito;
                 
                 const box = document.createElement('div');
-                box.style.cssText = `padding: 20px; border-radius: 12px; border: 1px solid ${escolheuCerto ? '#a7f3d0' : '#fca5a5'}; background: ${escolheuCerto ? '#f0fdf4' : '#fef2f2'}; margin-bottom: 15px; color: #0f172a;`;
+                box.style.cssText = `padding: 20px; border-radius: 12px; border: 1px solid ${escolheuCerto ? '#a7f3d0' : '#fca5a5'}; background: ${escolheuCerto ? '#f0fdf4' : '#fef2f2'}; margin-bottom: 15px; color: #0f172a; box-sizing: border-box;`;
                 
                 box.innerHTML = `
                     <strong>Questão ${i + 1} (${q.materia}):</strong>

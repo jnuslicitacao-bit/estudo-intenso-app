@@ -28,11 +28,13 @@
         }
 
         .container {
+            width: 100%;
             max-width: 1000px;
             background: var(--card-bg);
             padding: 40px;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
             margin: auto;
         }
 
@@ -57,12 +59,13 @@
 
         select {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            font-size: 16px;
+            font-size: 16px; /* Impede zoom indesejado */
             margin-bottom: 25px;
             background-color: #fff;
+            box-sizing: border-box;
         }
 
         .layout-redacao {
@@ -77,12 +80,14 @@
             padding: 25px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
+            box-sizing: border-box;
         }
 
         .painel-escrita {
             display: flex;
             flex-direction: column;
             gap: 15px;
+            box-sizing: border-box;
         }
 
         textarea {
@@ -91,7 +96,7 @@
             padding: 20px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            font-size: 15px;
+            font-size: 16px; /* Melhor legibilidade e impede zoom no iOS */
             font-family: 'Courier New', Courier, monospace;
             resize: none;
             box-sizing: border-box;
@@ -109,7 +114,7 @@
             background-color: #f59e0b;
             color: white;
             border: none;
-            padding: 14px;
+            padding: 16px;
             cursor: pointer;
             border-radius: 8px;
             font-size: 16px;
@@ -117,6 +122,7 @@
             width: 100%;
             transition: background 0.2s;
             box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2);
+            box-sizing: border-box;
         }
         .btn-enviar:hover { background-color: #d97706; }
         .btn-enviar:disabled { background-color: #cbd5e1; cursor: not-allowed; color: #94a3b8; box-shadow: none; }
@@ -140,6 +146,28 @@
             font-size: 13px;
             color: var(--text-muted);
             font-weight: 500;
+        }
+
+        /* 📱 MEDIA QUERIES PARA CELULARES */
+        @media (max-width: 800px) {
+            body {
+                padding: 15px 10px;
+            }
+
+            .container {
+                padding: 25px 15px;
+                border-radius: 12px;
+            }
+
+            .layout-redacao {
+                grid-template-columns: 1fr; /* Desmancha as duas colunas do desktop */
+                gap: 20px;
+            }
+
+            textarea {
+                height: 320px; /* Reduz ligeiramente para acomodar o teclado do celular */
+                padding: 15px;
+            }
         }
     </style>
 </head>
@@ -196,7 +224,7 @@
         }
     }
 
-    function atualizarTextosMotivadores() {
+    function actualizarTextosMotivadores() {
         const id = document.getElementById('seletor-temas').value;
         const painel = document.getElementById('textos-motivadores');
         const botao = document.getElementById('btn-enviar-redacao');

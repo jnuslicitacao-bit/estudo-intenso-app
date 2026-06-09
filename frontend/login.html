@@ -118,6 +118,23 @@
         .footer-links a:hover {
             text-decoration: underline;
         }
+        /* 📱 Responsividade para o Login */
+@media (max-width: 480px) {
+    body {
+        align-items: flex-start;
+        padding: 20px;
+        background-color: white;
+    }
+    .auth-card {
+        padding: 25px 20px;
+        box-shadow: none;
+        border-radius: 0;
+    }
+    input, .btn-auth {
+        padding: 14px;
+        font-size: 16px; /* Impede zoom no iPhone */
+    }
+}
     </style>
 </head>
 <body>

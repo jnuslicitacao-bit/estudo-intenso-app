@@ -39,6 +39,7 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            gap: 10px;
         }
         
         /* Estado quando o sistema detecta pacotes expirados */
@@ -58,6 +59,7 @@
             cursor: pointer;
             font-size: 13px;
             transition: 0.2s;
+            white-space: nowrap;
         }
         
         .top-sync-bar.desatualizado .btn-update-top {
@@ -78,6 +80,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 20px;
         }
         .logo-area {
             display: flex;
@@ -86,6 +89,7 @@
             font-size: 22px;
             font-weight: 700;
             color: var(--text-main);
+            white-space: nowrap;
         }
         .nav-links {
             display: flex;
@@ -99,6 +103,7 @@
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .nav-item:hover, .nav-item.active {
             background: var(--primary-light);
@@ -110,6 +115,7 @@
             gap: 10px;
             font-size: 14px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         /* LAYOUT PRINCIPAL */
@@ -164,6 +170,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
+            margin-bottom: 25px;
         }
         .card-home {
             background: var(--card-bg);
@@ -257,6 +264,76 @@
             font-size: 14px;
         }
         .btn-logout-footer:hover { color: var(--danger); }
+
+        /* 📱 MEDIA QUERIES - RESPONSIVIDADE MOBILE COMPLETA */
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                padding: 15px 20px;
+                gap: 12px;
+            }
+            
+            .nav-links {
+                width: 100%;
+                justify-content: center;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .wrapper {
+                grid-template-columns: 1fr; /* Muda de colunas laterais para empilhado */
+                margin: 15px auto;
+                gap: 20px;
+            }
+
+            .footer-insight {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .top-sync-bar {
+                flex-direction: column;
+                text-align: center;
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+            
+            .btn-update-top {
+                width: 100%;
+                padding: 10px;
+            }
+
+            .hero-banner {
+                padding: 25px 20px;
+                border-radius: 12px;
+            }
+
+            .hero-banner h2 {
+                font-size: 22px;
+            }
+
+            .hero-banner p {
+                font-size: 14px;
+            }
+
+            .grid-modulos {
+                grid-template-columns: 1fr; /* Empilha os cards de Simulado e Redação */
+                gap: 15px;
+            }
+
+            .card-home {
+                padding: 20px;
+            }
+
+            .footer-insight {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 20px;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -297,7 +374,7 @@
                 </a>
                 <a href="redacao.html" class="card-home redacao">
                     <h4>✍️ Laboratório de Redação Nota 1000</h4>
-                    <p>Submeta seu texto argumentativo e receba imediatamente a correção detalhada por competências no padrão ENEM.</p>
+                    <p>Submeta seu text argumentativo e receba imediatamente a correção detalhada por competências no padrão ENEM.</p>
                 </a>
             </div>
         </section>
@@ -319,7 +396,7 @@
         </aside>
 
         <footer class="footer-insight">
-            <div style="font-size: 24px;">💡</div>
+            <div style="font-size: 24px; line-height: 1;">💡</div>
             <div>
                 <strong style="color: #1e40af; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Insight Preditivo do Professor IA</strong>
                 <span id="painel-insight" style="color: #1e3a8a; font-size: 15px; font-style: italic;">Analisando suas métricas recentes...</span>
