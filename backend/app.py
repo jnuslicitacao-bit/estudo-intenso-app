@@ -807,7 +807,19 @@ def checar_status():
 # 🟢 1. Coloque a rota raiz AQUI (Antes do IF)
 @app.route('/')
 def home():
-    return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
+    # Coleta todas as chaves de ambiente reais que o Python está lendo na nuvem
+    chaves_reais = list(os.environ.keys())
+    
+    # Verifica se existe algo parecido com DATABASE_URL
+    possui_database = "DATABASE_URL" in os.environ
+    possui_private = "DATABASE_PRIVATE_URL" in os.environ
+    
+    return {
+        "status": "online",
+        "DATABASE_URL_EXISTE_NO_PYTHON?": possui_database,
+        "DATABASE_PRIVATE_URL_EXISTE?": possui_private,
+        "todas_as_chaves_detectadas": chaves_reais
+    }, 200
 
 # 🟡 2. O bloco IF deve ser a ÚLTIMA coisa do arquivo
 if __name__ == '__main__':
