@@ -71,7 +71,7 @@
     async function carregarDadosDesempenho() {
         try {
             const usuario = JSON.parse(dadosUsuario);
-            const resposta = await fetch(`http://localhost:5000/api/desempenho?usuario_id=${usuario.id}`);
+            const resposta = await fetch(`https://estudo-intensivo-backend.onrender.com`);
             const dados = await resposta.json();
 
             if (dados.status === "sucesso") {

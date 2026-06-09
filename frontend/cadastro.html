@@ -48,7 +48,7 @@
         }
 
         try {
-            const resposta = await fetch('http://localhost:5000/api/cadastro', {
+            const resposta = await fetch('https://estudo-intensivo-backend.onrender.com', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, email, senha })
