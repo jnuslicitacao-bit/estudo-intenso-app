@@ -1,4 +1,4 @@
-// Configuração centralizada de ambiente da plataforma Estudo Intenso
 const CONFIG = {
-    URL_BACKEND: "https://estudo-intensivo-backend.onrender.com" // 🌟 Sem barra no final!
+    // 🌟 Altere de localhost para o link do seu backend no Render:
+    URL_BACKEND: "https://estudo-intensivo-backend.onrender.com"
 };
