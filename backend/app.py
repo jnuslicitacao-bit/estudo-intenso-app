@@ -308,89 +308,6 @@ def obter_historico_simulados():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
-@app.route('/api/redacao', methods=['POST'])
-def corrigir_redacao():
-    """Envia o texto para a OpenAI, trata caracteres UTF-8 e vincula ao ID do usuário logado"""
-    dados = request.get_json()
-    texto_aluno = dados.get('texto')
-    tema = dados.get('tema')
-    usuario_id = dados.get('usuario_id')
-    
-    if not texto_aluno or not tema or not usuario_id:
-        return jsonify({"status": "erro", "mensagem": "Dados incompletos."}), 400
-
-    texto_aluno = texto_aluno.encode('utf-8', errors='ignore').decode('utf-8')
-    tema = tema.encode('utf-8', errors='ignore').decode('utf-8')
-
-    prompt_sistema = "Você é um corretor especialista em redações dissertativo-argumentativas no modelo do ENEM. Avalie com rigor."
-    prompt_usuario = f"""
-    Analise a redação abaixo com base no tema proposto.
-    
-    TEMA: {tema}
-    TEXTO DO ALUNO:
-    {texto_aluno}
-    
-    Responda ESTRITAMENTE no formato abaixo, sem saudações ou textos adicionais de introdução/conclusão:
-    NOTA: [Insira aqui a nota final de 0 a 1000]
-    ANÁLISE: [Insira aqui um feedback detalhado dividindo por pontos fortes, erros gramaticais encontrados e como melhorar a proposta de intervenção]
-    """
-
-    try:
-        resposta = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": prompt_sistema},
-                {"role": "user", "content": prompt_usuario}
-            ],
-            temperature=0.3
-        )
-        
-        resposta_ia = resposta.choices[0].message.content.strip()
-        resposta_ia = resposta_ia.encode('utf-8', errors='ignore').decode('utf-8')
-        
-        try:
-            linhas = resposta_ia.split('\n')
-            nota_final = int(linhas[0].replace('NOTA:', '').strip())
-            feedback_real = resposta_ia.replace(linhas[0], '').replace('ANÁLISE:', '').strip()
-        except Exception:
-            nota_final = 740  
-            feedback_real = resposta_ia
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS redacoes (
-                id SERIAL PRIMARY KEY,
-                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
-                tema TEXT NOT NULL,
-                texto TEXT NOT NULL,
-                nota_final INT NOT NULL,
-                feedback_ia TEXT NOT NULL,
-                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-
-        cur.execute(
-            "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-            (usuario_id, tema, texto_aluno, nota_final, feedback_real)
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            "status": "sucesso",
-            "nota": nota_final,
-            "feedback": feedback_real
-        }), 200
-
-    except Exception as e:
-        print(f"❌ ERRO CRÍTICO NA CORREÇÃO DE REDAÇÃO: {str(e)}")
-        return jsonify({"status": "erro", "mensagem": f"Falha no processamento: {str(e)}"}), 500
-
-
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
     """Busca métricas históricas filtrando pelo ID dinâmico do usuário logado"""
@@ -487,34 +404,37 @@ def obter_temas_redacao():
 
 @app.route('/api/questoes/ia', methods=['POST'])
 def obter_questoes_ia():
-    """Gera questões inéditas simulando o estilo e o conteúdo de uma banca específica usando IA"""
+    """Gera questões inéditas E o conteúdo do edital baseado na banca informada"""
     dados = request.get_json()
     pesquisa_banca = dados.get('banca')
 
     if not pesquisa_banca:
         return jsonify({"status": "erro", "mensagem": "Nenhuma banca informada."}), 400
 
-    prompt_sistema = "Você é um professor joker especialista em bancas de concursos públicos e vestibulares brasileiros."
+    prompt_sistema = "Você é um professor especialista em editais de concursos públicos e vestibulares brasileiros."
     prompt_usuario = f"""
-    Gere um simulado contendo exatamente 5 questões inéditas de múltipla escolha focadas estritamente no perfil, conteúdo programático e nível de dificuldade da seguinte banca/concurso: {pesquisa_banca}.
-    
-    As matérias devem ser relevantes para esse concurso. As alternativas corretas devem ser distribuídas aleatoriamente.
-    
-    Retorne ESTRITAMENTE um array em formato JSON puro, sem comentários, sem markdown (sem aspas ```json no início ou fim), seguindo EXATAMENTE a estrutura deste exemplo:
-    [
-      {{
-        "materia": "Nome da Disciplina",
-        "enunciado": "Texto do enunciado da questão...",
-        "opcoes": {{
-          "A": "Texto da alternativa A",
-          "B": "Texto da alternativa B",
-          "C": "Texto da alternativa C",
-          "D": "Texto da alternativa D",
-          "E": "Texto da alternativa E"
-        }},
-        "correta": "A"
-      }}
-    ]
+    Com base na banca/concurso alvo '{pesquisa_banca}', faça duas coisas:
+    1. Identifique as 3 matérias mais cobradas ou o núcleo do edital e dê um resumo cirúrgico (em tópicos) do que o aluno DEVE estudar.
+    2. Gere um simulado contendo exatamente 5 questões inéditas de múltipla escolha focadas no perfil desse concurso.
+
+    Retorne ESTRITAMENTE um objeto JSON puro, sem markdown (sem aspas ```json), seguindo EXATAMENTE esta estrutura:
+    {{
+      "edital_conteudo": "<h3>📚 Conteúdo Programático Sugerido (Foco no Edital)</h3><ul><li>Matéria 1: tópicos importantes...</li><li>Matéria 2: tópicos importantes...</li></ul>",
+      "questoes": [
+        {{
+          "materia": "Nome da Disciplina",
+          "enunciado": "Texto do enunciado da questão...",
+          "opcoes": {{
+            "A": "Texto da alternativa A",
+            "B": "Texto da alternativa B",
+            "C": "Texto da alternativa C",
+            "D": "Texto da alternativa D",
+            "E": "Texto da alternativa E"
+          }},
+          "correta": "A"
+        }}
+      ]
+    }}
     """
 
     try:
@@ -528,11 +448,90 @@ def obter_questoes_ia():
         )
         
         texto_resposta = resposta.choices[0].message.content.strip()
-        questoes_geradas = json.loads(texto_resposta)
-        return jsonify(questoes_geradas), 200
+        dados_gerados = json.loads(texto_resposta)
+        return jsonify(dados_gerados), 200
         
     except Exception as e:
-        return jsonify({"status": "erro", "mensagem": f"Erro ao gerar questões por IA: {str(e)}"}), 500
+        return jsonify({"status": "erro", "mensagem": f"Erro ao gerar conteúdo e simulado por IA: {str(e)}"}), 500
+
+
+@app.route('/api/redacao', methods=['POST'])
+def corrigir_redacao():
+    """Corrige a redação E gera um modelo de estrutura Nota 1000 focado no tema"""
+    dados = request.get_json()
+    texto_aluno = dados.get('texto')
+    tema = dados.get('tema')
+    usuario_id = dados.get('usuario_id')
+    
+    if not texto_aluno or not tema or not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Dados incompletos."}), 400
+
+    texto_aluno = texto_aluno.encode('utf-8', errors='ignore').decode('utf-8')
+    tema = tema.encode('utf-8', errors='ignore').decode('utf-8')
+
+    prompt_sistema = "Você é um corretor e redator nota 1000 especialista na prova de redação do ENEM."
+    prompt_usuario = f"""
+    Analise a redação abaixo e monte um esqueleto/modelo perfeito de redação Nota 1000 focado especificamente neste tema.
+    
+    TEMA: {tema}
+    TEXTO DO ALUNO: {texto_aluno}
+    
+    Responda ESTRITAMENTE no formato JSON abaixo, mantendo as chaves exatas (em texto puro, sem aspas ```json):
+    {{
+      "nota": 820,
+      "feedback": "Texto detalhado dividindo por competências...",
+      "modelo_nota_1000": "<h3>🏗️ Modelo de Estrutura Nota 1000 - Tema: {tema}</h3><p><strong>Introdução:</strong> Aluda a um repertório... <strong>Desenvolvimento 1:</strong> Argumente sobre... <strong>Proposta de Intervenção:</strong> Agente + Ação + Meio + Detalhamento..."
+    }}
+    """
+
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.4
+        )
+        
+        resposta_ia = resposta.choices[0].message.content.strip()
+        dados_correcao = json.loads(resposta_ia)
+
+        # Salva no banco de dados para não quebrar o seu histórico do painel
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS redacoes (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                tema TEXT NOT NULL,
+                texto TEXT NOT NULL,
+                nota_final INT NOT NULL,
+                feedback_ia TEXT NOT NULL,
+                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        cur.execute(
+            "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
+            (usuario_id, tema, texto_aluno, int(dados_correcao["nota"]), dados_correcao["feedback"])
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "status": "sucesso",
+            "nota": dados_correcao["nota"],
+            "feedback": dados_correcao["feedback"],
+            "modelo_nota_1000": dados_correcao["modelo_nota_1000"]
+        }), 200
+
+    except Exception as e:
+        print(f"❌ ERRO CRÍTICO NA REDAÇÃO: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": f"Falha no processamento: {str(e)}"}), 500
 
 
 @app.route('/api/sistema/status', methods=['GET'])

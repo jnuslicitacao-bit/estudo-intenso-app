@@ -100,7 +100,7 @@
         input[type="text"], select {
             width: 100%;
             padding: 12px;
-            font-size: 16px; /* 🌟 Previne zoom nativo indesejado no iOS */
+            font-size: 16px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-sizing: border-box;
@@ -160,7 +160,7 @@
             display: block;
             width: 100%;
             text-align: left;
-            padding: 16px 20px; /* Expandido para clique confortável via touch */
+            padding: 16px 20px;
             margin: 12px 0;
             background: #fff;
             border: 1px solid var(--border-color);
@@ -201,7 +201,7 @@
             margin-top: 12px;
             background: #8b5cf6;
             transition: background 0.2s;
-            width: 100%; /* Ocupa largura total no mobile para melhor clique */
+            width: 100%;
             text-align: center;
         }
         .btn-comment-ia:hover { background: #7c3aed; }
@@ -238,7 +238,6 @@
                 font-size: 14px;
             }
             
-            /* Ajustes no cabeçalho das questões para não esmagar */
             div[style*="display: flex; justify-content: space-between;"] {
                 flex-direction: column;
                 align-items: flex-start !important;
@@ -289,6 +288,8 @@
     </div>
 
     <div id="bloco-questoes-simulado" style="display: none;">
+        <div id="painel-edital-ia" style="background: #fff; padding: 20px; border-left: 4px solid var(--primary); border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 25px; display: none; line-height: 1.6;"></div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2 id="titulo-simulado" style="margin: 0; font-size: 22px; font-weight: 700;">Simulado Dinâmico</h2>
             <span id="materia" class="materia-tag">Carregando...</span>
@@ -302,7 +303,7 @@
     </div>
 
     <div id="bloco-revisao-gabarito" style="display: none; margin-top: 25px;">
-        <h2 style="color: var(--success); font-size: 24px; font-weight: 700; margin-bottom: 10px;">🏁 Caderno Evaluado com Sucesso!</h2>
+        <h2 style="color: var(--success); font-size: 24px; font-weight: 700; margin-bottom: 10px;">🏁 Caderno Avaliado com Sucesso!</h2>
         <div id="card-resultado-pontos" style="background: #f1f5f9; padding: 20px; border-radius: 10px; font-size: 16px; font-weight: 700; margin-bottom: 30px; text-align: center; border: 1px solid var(--border-color);"></div>
         
         <h3 style="font-size: 18px; margin-bottom: 15px;">🔍 Espelho de Correção Pedagógica</h3>
@@ -369,13 +370,14 @@
         }
     }
 
+    // --- 🌟 MOTOR DE BUSCA COM IA E EDITAL ADAPTADOS ---
     async function iniciarSimuladoIA() {
         const bancaAlvo = document.getElementById('busca-banca').value.trim();
         const btnIa = document.getElementById('btn-gerar-ia');
         if (!bancaAlvo) { alert("Digite o nome da banca!"); return; }
 
         btnIa.disabled = true;
-        btnIa.innerText = "🤖 Solicitando formulação por IA...";
+        btnIa.innerText = "🤖 Mapeando Edital e Prova...";
 
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/questoes/ia`, {
@@ -383,17 +385,31 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ banca: bancaAlvo })
             });
-            questoes = await r.json();
+            const dadosRecebidos = await r.json();
             
-            if (questoes.length > 0) {
+            // Atribui as questões mapeadas do nó do objeto JSON retornado
+            questoes = dadosRecebidos.questoes;
+            const blocoEdital = document.getElementById('painel-edital-ia');
+            
+            if (questoes && questoes.length > 0) {
                 modoIAAtivo = true;
                 document.getElementById('titulo-simulado').innerText = `Banca Alvo: ${bancaAlvo}`;
+                
+                // Trata e exibe o edital se ele vier preenchido pela IA
+                if (dadosRecebidos.edital_conteudo) {
+                    blocoEdital.innerHTML = dadosRecebidos.edital_conteudo;
+                    blocoEdital.style.display = 'block';
+                } else {
+                    blocoEdital.style.display = 'none';
+                }
+
                 dispararPainelProva();
             } else {
                 alert("Falha ao gerar questões.");
                 resetBotaoIA();
             }
         } catch (erro) {
+            console.error(erro);
             alert("Erro de conexão com o ecossistema.");
             resetBotaoIA();
         }
@@ -406,6 +422,9 @@
     }
 
     async function iniciarSimuladoTradicional() {
+        // Esconde o painel do edital se o usuário optar pela prova estática comum
+        document.getElementById('painel-edital-ia').style.display = 'none';
+        
         const mat = document.getElementById('filtro-materia').value;
         const url = mat ? `${CONFIG.URL_BACKEND}/api/questoes?materia=${encodeURIComponent(mat)}` : `${CONFIG.URL_BACKEND}/api/questoes`;
 

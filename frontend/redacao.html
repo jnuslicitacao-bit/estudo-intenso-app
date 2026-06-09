@@ -261,8 +261,34 @@
 
             const res = await r.json();
             if (r.ok) {
-                alert(`🎉 Redação corrigida com sucesso!\nSua Nota: ${res.nota}/1000`);
-                window.location.href = 'index.html'; 
+                // Em vez de dar o redirect imediato para o dashboard, exibimos o resultado completo e o modelo na tela!
+                document.querySelector('.layout-redacao').style.display = 'none';
+                
+                // Cria um painel completo de exibição de resultados dinamicamente na tela do aluno
+                const containerPrincipal = document.querySelector('.container');
+                const painelResultado = document.createElement('div');
+                painelResultado.style.cssText = "margin-top: 25px; display: flex; flex-direction: column; gap: 20px;";
+                
+                painelResultado.innerHTML = `
+                    <div style="background: #f0fdf4; border: 1px solid #a7f3d0; padding: 25px; border-radius: 12px; text-align: center;">
+                        <h2 style="color: var(--success); margin: 0 0 10px 0;">🎉 Correção Concluída com Sucesso!</h2>
+                        <span style="font-size: 48px; font-weight: 800; color: var(--primary);">${res.nota} / 1000</span>
+                    </div>
+                    
+                    <div style="background: #fff; border: 1px solid var(--border-color); padding: 25px; border-radius: 12px;">
+                        <h3 style="margin-top:0; color: var(--text-main);">📋 Avaliação das Competências</h3>
+                        <p style="white-space: pre-wrap; line-height: 1.6; color: #334155;">${res.feedback}</p>
+                    </div>
+                    
+                    <div style="background: #fff; border: 2px dashed #8b5cf6; padding: 25px; border-radius: 12px; background-color: #f5f3ff;">
+                        ${res.modelo_nota_1000}
+                    </div>
+                    
+                    <button class="btn-enviar" onclick="window.location.href='index.html'" style="background-color: var(--primary);">
+                        Voltar ao Dashboard Central →
+                    </button>
+                `;
+                containerPrincipal.appendChild(painelResultado);
             } else {
                 alert("Erro reportado: " + res.mensagem);
                 botao.disabled = false;
