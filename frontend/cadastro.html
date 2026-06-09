@@ -48,7 +48,7 @@
         }
 
         try {
-            const resposta = await fetch('https://estudo-intensivo-backend.onrender.com', {
+            const resposta = await fetch('fetch("https://estudo-intensivo-backend.onrender.com/api/cadastro", { // ✅ Rota completa e correta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, email, senha })
