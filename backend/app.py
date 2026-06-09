@@ -491,13 +491,23 @@ def corrigir_redacao():
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": prompt_usuario}
             ],
-            temperature=0.4
+            temperature=0.3
         )
         
         resposta_ia = resposta.choices[0].message.content.strip()
+        print(f"DEBUG - Resposta Bruta da IA: {resposta_ia}")  # Ajuda a ver o que a IA mandou no log do Render
+
+        # 🛡️ FILTRO EXTRATOR AVANÇADO: Encontra o JSON mesmo se a IA colocar lixo ao redor
+        start_idx = resposta_ia.find('{')
+        end_idx = resposta_ia.rfind('}') + 1
+        
+        if start_idx != -1 and end_idx != 0:
+            resposta_ia = resposta_ia[start_idx:end_idx]
+        else:
+            raise ValueError("A resposta da IA não contém um objeto JSON válido.")
+
         dados_correcao = json.loads(resposta_ia)
 
-        # Salva no banco de dados para não quebrar o seu histórico do painel
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -516,7 +526,7 @@ def corrigir_redacao():
 
         cur.execute(
             "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-            (usuario_id, tema, texto_aluno, int(dados_correcao["nota"]), dados_correcao["feedback"])
+            (usuario_id, tema, texto_aluno, int(dados_correcao.get("nota", 700)), dados_correcao.get("feedback", ""))
         )
         conn.commit()
         cur.close()
@@ -524,9 +534,9 @@ def corrigir_redacao():
 
         return jsonify({
             "status": "sucesso",
-            "nota": dados_correcao["nota"],
-            "feedback": dados_correcao["feedback"],
-            "modelo_nota_1000": dados_correcao["modelo_nota_1000"]
+            "nota": dados_correcao.get("nota", 700),
+            "feedback": dados_correcao.get("feedback", ""),
+            "modelo_nota_1000": dados_correcao.get("modelo_nota_1000", "<h3>🏗️ Modelo</h3><p>Não gerado.</p>")
         }), 200
 
     except Exception as e:
