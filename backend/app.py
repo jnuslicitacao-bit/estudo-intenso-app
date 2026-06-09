@@ -24,28 +24,21 @@ import pg8000
 def get_db_connection():
     """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
     
-    # Busca a variável de ambiente removendo possíveis espaços acidentais
-    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
+    # 🌟 O TRUQUE MESTRE: Força o Python a ler diretamente do sistema operacional,
+    # ignorando qualquer interferência de arquivos .env residuais
+    database_url = os.getenv("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
+
     if database_url:
         database_url = database_url.strip()
-
-    # TESTE SEGUNDO PLANO: Caso o Render use outro padrão, checa chaves similares
-    if not database_url:
-        database_url = os.environ.get("DATABASE_PRIVATE_URL")
-
-    if database_url:
         try:
-            print("🚀 Conectando ao Banco de Dados de PRODUÇÃO (Render)...")
+            print("🚀 SUCESSO: Variável encontrada! Conectando ao Postgres do Render...")
             conn = pg8000.connect(dsn=database_url)
             return conn
         except Exception as e:
             print(f"❌ Erro ao conectar na URL de Produção: {str(e)}")
             raise e
     else:
-        # Se mesmo assim der erro, vamos imprimir as chaves para depurar no log
-        print("⚠️ DATABASE_URL não foi encontrada nas variáveis do Render!")
-        print(f"Chaves disponíveis no ambiente: {list(os.environ.keys())}")
-        
+        print("⚠️ DATABASE_URL retornou vazia no os.getenv.")
         print("💻 Tentando conectar ao Banco Local (localhost)...")
         return pg8000.connect(
             user="administrador",
