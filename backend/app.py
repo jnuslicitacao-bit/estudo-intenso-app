@@ -23,21 +23,30 @@ import pg8000
 
 def get_db_connection():
     """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
-    # 🌟 O segredo está aqui: tenta ler a variável que você configurou no painel
-    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
     
+    # Busca a variável de ambiente removendo possíveis espaços acidentais
+    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
+    if database_url:
+        database_url = database_url.strip()
+
+    # TESTE SEGUNDO PLANO: Caso o Render use outro padrão, checa chaves similares
+    if not database_url:
+        database_url = os.environ.get("DATABASE_PRIVATE_URL")
+
     if database_url:
         try:
-            # O Render fornece a URL no padrão 'postgresql://user:pass@host:port/db'
-            # O pg8000 aceita a string de conexão direta usando o método from_url
+            print("🚀 Conectando ao Banco de Dados de PRODUÇÃO (Render)...")
             conn = pg8000.connect(dsn=database_url)
             return conn
         except Exception as e:
             print(f"❌ Erro ao conectar na URL de Produção: {str(e)}")
             raise e
     else:
-        # 💻 Caso você esteja rodando no seu computador (Sem DATABASE_URL)
-        print("💻 Conectando ao Banco Local (Ambiente de Desenvolvimento)")
+        # Se mesmo assim der erro, vamos imprimir as chaves para depurar no log
+        print("⚠️ DATABASE_URL não foi encontrada nas variáveis do Render!")
+        print(f"Chaves disponíveis no ambiente: {list(os.environ.keys())}")
+        
+        print("💻 Tentando conectar ao Banco Local (localhost)...")
         return pg8000.connect(
             user="administrador",
             password="SuaSenhaLocalAqui",
