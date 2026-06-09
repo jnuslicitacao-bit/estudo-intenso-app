@@ -46,13 +46,13 @@ def get_db_connection():
         )
 
 def inicializar_banco():
-    """Garante as tabelas na nuvem apenas se a conexão for bem sucedida"""
-    # Só roda a criação se estivermos no Render ou com banco ativo
-    if os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"):
+    """Garante as tabelas na nuvem com SQL correto para PostgreSQL"""
+    if os.environ.get("DATABASE_URL"):
         try:
             conn = get_db_connection()
             cur = conn.cursor()
             
+            # 1. Tabela de controle (CORRIGIDA: removido o 'NOT EXISTS' inválido)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS controle_atualizacao (
                     id SERIAL PRIMARY KEY,
@@ -60,6 +60,7 @@ def inicializar_banco():
                 );
             """)
             
+            # 2. Tabela de simulados
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS simulados (
                     id SERIAL PRIMARY KEY,
@@ -73,9 +74,9 @@ def inicializar_banco():
             conn.commit()
             cur.close()
             conn.close()
-            print("✅ [BANCO] Tabelas validadas com sucesso na Nuvem!")
+            print("✅ [BANCO] Tabelas criadas/validadas com sucesso na Nuvem!")
         except Exception as e:
-            print(f"❌ [ERRO BANCO] Falha ao criar tabelas iniciais: {str(e)}")
+            print(f"❌ [ERRO CRÍTICO CRIAÇÃO TABELAS]: {str(e)}")
 
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
@@ -747,52 +748,34 @@ def comentar_questao_ia():
 
 @app.route('/api/sistema/status', methods=['GET'])
 def checar_status():
-    """Verifica se os pacotes de matérias do banco na nuvem expiraram (Validade: 2 dias)"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # 1. Garante que a tabela de controle exista na nuvem do Render
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS controle_atualizacao (
-                id SERIAL PRIMARY KEY,
-                ultima_atualizacao TIMESTAMP NOT NULL
-            );
-        """)
-        conn.commit()
-        
-        # 2. Busca o último registro de atualização
-        cur.execute("SELECT ultima_atualizacao FROM controle_atualizacao ORDER BY id DESC LIMIT 1;")
-        registro = cur.fetchone()
-        
+        cur.execute("SELECT 1;") # Testa a saúde do banco
+        cur.close()
+        conn.close()
+        return {"status": "online", "banco": "conectado"}, 200
+    except Exception as e:
+        print(f"❌ Erro na rota de status: {str(e)}")
+        return {"status": "erro", "detalhe": str(e)}, 500
+
+@app.route('/api/simulados/historico', methods=['GET'])
+def obter_historico():
+    usuario_id = request.args.get('usuario_id')
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, materia, nota, data_realizacao FROM simulados WHERE usuario_id = %s;", (usuario_id,))
+        dados = cur.fetchall()
         cur.close()
         conn.close()
         
-        # Se o banco acabou de ser criado e não tem nenhuma carga da IA ainda
-        if not registro:
-            return jsonify({
-                "status": "desatualizado", 
-                "ultima": "Nunca atualizado",
-                "mensagem": "O banco na nuvem está pronto, mas aguarda a primeira carga de matérias da IA."
-            }), 200
-            
-        ultima_data = registro[0]
-        # Calcula se já se passaram mais de 2 dias (48 horas)
-        if datetime.now() - ultima_data > timedelta(days=2):
-            return jsonify({"status": "desatualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
-        else:
-            return jsonify({"status": "atualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
-            
+        # Converte o retorno para uma lista amigável
+        historico = [{"id": d[0], "materia": d[1], "nota": d[2], "data": str(d[3])} for d in dados]
+        return jsonify(historico), 200
     except Exception as e:
-        # Isso vai imprimir o erro real nos Logs do Render
-        print(f"❌ ERRO DETECTADO NO SERVIDOR: {str(e)}")
-        
-        # 🌟 ISSO VAI ENVIAR O ERRO REAL PARA A TELA DO SEU CHROME!
-        return jsonify({
-            "status": "erro", 
-            "mensagem": "Erro interno no servidor.",
-            "detalhe_real_do_erro": str(e)
-        }), 500
+        print(f"❌ Erro na rota de historico: {str(e)}")
+        return {"status": "erro", "mensagem": "Falha ao ler histórico"}, 500
 
 # 🟢 1. Coloque a rota raiz AQUI (Antes do IF)
 @app.route('/')
