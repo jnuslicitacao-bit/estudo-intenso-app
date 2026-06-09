@@ -30,7 +30,7 @@ import psycopg2
 def get_db_connection():
     """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
     # Pega a variável direto do Render
-    database_url = os.environ.get("DATABASE_URL")
+    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
     
     if database_url:
         print("🚀 [DATABASE.PY] Conectando ao Postgres do Render com Psycopg2...")
@@ -39,7 +39,7 @@ def get_db_connection():
         print("💻 [DATABASE.PY] Nenhuma URL de nuvem. Conectando ao Postgres Local...")
         return psycopg2.connect(
             user="administrador",
-            password="SuaSenhaLocalAqui",
+            password="nova_senha123",
             host="localhost",
             port=5432,
             database="estudo_intensivo_db"
@@ -47,7 +47,7 @@ def get_db_connection():
 
 def inicializar_banco():
     """Garante as tabelas na nuvem com SQL correto para PostgreSQL"""
-    if os.environ.get("DATABASE_URL"):
+    if os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"):
         try:
             conn = get_db_connection()
             cur = conn.cursor()
