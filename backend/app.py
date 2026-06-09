@@ -20,29 +20,45 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 import os
 import pg8000
+from urllib.parse import urlparse # 🌟 Biblioteca nativa do Python para ler URLs
 
 def get_db_connection():
-    """Conecta ao banco PostgreSQL priorizando o ambiente real do Render"""
+    """Conecta ao banco PostgreSQL decodificando a URL manualmente"""
     
     database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
-    
     if not database_url:
         database_url = os.environ.get("DATABASE_PRIVATE_URL")
 
     if database_url:
         database_url = database_url.strip()
 
+    # Se encontramos a URL da Nuvem do Render
     if database_url and "localhost" not in database_url:
         try:
-            print("🚀 [CONEXÃO] URL de Produção detectada! Conectando ao Postgres do Render...")
+            print("🚀 [CONEXÃO] Decodificando URL do Render manualmente...")
             
-            # 🌟 CORREÇÃO AQUI: Passamos a URL usando o método correto da biblioteca pg8000
-            return pg8000.from_url(database_url)
+            # Divide a URL em pedaços: postgresql://usuario:senha@host:porta/banco
+            result = urlparse(database_url)
             
+            username = result.username
+            password = result.password
+            database = result.path[1:] # Remove a barra '/' inicial do nome do banco
+            hostname = result.hostname
+            port = result.port or 5432
+            
+            # Conecta usando os argumentos exatos que o pg8000 exige
+            return pg8000.connect(
+                user=username,
+                password=password,
+                host=hostname,
+                port=port,
+                database=database
+            )
         except Exception as e:
-            print(f"❌ [ERRO] Falha ao conectar na URL do Render: {str(e)}")
+            print(f"❌ [ERRO] Falha ao quebrar ou conectar na URL do Render: {str(e)}")
             raise e
             
+    # Se estiver rodando na sua máquina local
     else:
         print("💻 [CONEXÃO] Nenhuma URL de nuvem encontrada. Conectando ao Postgres Local...")
         return pg8000.connect(
