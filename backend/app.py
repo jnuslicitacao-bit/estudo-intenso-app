@@ -8,8 +8,10 @@ from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-# Carrega as variáveis de ambiente do arquivo .env
-load_dotenv()
+# 🌟 SÓ CARREGA O .ENV SE ESTIVER LOCALMENTE (Impede o bug de apagar as variáveis no Render)
+if not os.environ.get("RENDER"):
+    print("💻 Carregando variáveis do arquivo .env local...")
+    load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -18,30 +20,28 @@ CORS(app)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-import os
 import psycopg2  # 🌟 Trocamos para o conector padrão e robusto
 
 def get_db_connection():
     """Conecta ao banco PostgreSQL usando o psycopg2"""
     
+    # Busca direto do ambiente do Render
     database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
+    
+    # Se der falso positivo, tenta a chave secundária padrão do Render
     if not database_url:
         database_url = os.environ.get("DATABASE_PRIVATE_URL")
 
-    if database_url:
-        database_url = database_url.strip()
-
-    # Se estamos na nuvem (Render)
+    # Se encontramos qualquer URL válida da Nuvem
     if database_url and "localhost" not in database_url:
         try:
             print("🚀 [CONEXÃO] Conectando ao Postgres do Render com Psycopg2...")
-            # O psycopg2 aceita a URL de conexão diretamente
-            return psycopg2.connect(database_url)
+            return psycopg2.connect(database_url.strip())
         except Exception as e:
             print(f"❌ [ERRO] Falha na conexão de Produção: {str(e)}")
             raise e
             
-    # Se estiver rodando na sua máquina local
+    # Se falhar total (Ambiente Local)
     else:
         print("💻 [CONEXÃO] Nenhuma URL de nuvem encontrada. Conectando ao Postgres Local...")
         return psycopg2.connect(
