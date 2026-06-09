@@ -20,30 +20,23 @@ CORS(app)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-import psycopg2  # 🌟 Trocamos para o conector padrão e robusto
+import os
+import psycopg2
 
 def get_db_connection():
-    """Conecta ao banco PostgreSQL usando o psycopg2"""
+    """Conecta diretamente ao PostgreSQL do Render ou Localhost de forma estrita"""
     
-    # Busca direto do ambiente do Render
+    # 1. Tenta pegar a variável oficial do painel
     database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
     
-    # Se der falso positivo, tenta a chave secundária padrão do Render
-    if not database_url:
-        database_url = os.environ.get("DATABASE_PRIVATE_URL")
-
-    # Se encontramos qualquer URL válida da Nuvem
-    if database_url and "localhost" not in database_url:
-        try:
-            print("🚀 [CONEXÃO] Conectando ao Postgres do Render com Psycopg2...")
-            return psycopg2.connect(database_url.strip())
-        except Exception as e:
-            print(f"❌ [ERRO] Falha na conexão de Produção: {str(e)}")
-            raise e
-            
-    # Se falhar total (Ambiente Local)
+    # 2. Se ela existir na memória, força a conexão com ela sem fazer perguntas!
+    if database_url:
+        print("🚀 [CONEXÃO] Conectando diretamente via DATABASE_URL detectada...")
+        return psycopg2.connect(database_url.strip())
+        
+    # 3. Se e somente se não existir nenhuma variável (Sua máquina física)
     else:
-        print("💻 [CONEXÃO] Nenhuma URL de nuvem encontrada. Conectando ao Postgres Local...")
+        print("💻 [CONEXÃO] Nenhuma variável de nuvem. Conectando ao Postgres Local...")
         return psycopg2.connect(
             user="administrador",
             password="SuaSenhaLocalAqui",
@@ -51,41 +44,38 @@ def get_db_connection():
             port=5432,
             database="estudo_intensivo_db"
         )
-    
-def inicializar_banco():
-    """Garante que as tabelas necessárias existam no PostgreSQL do Render"""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        # 1. Tabela de controle de sincronismo
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS controle_atualizacao (
-                id SERIAL PRIMARY KEY,
-                ultima_atualizacao TIMESTAMP NOT EXISTS DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        
-        # 2. Tabela de simulados (Histórico)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS simulados (
-                id SERIAL PRIMARY KEY,
-                usuario_id INT,
-                materia VARCHAR(100),
-                nota INT,
-                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("✅ Tabelas verificadas/criadas com sucesso no banco remoto!")
-    except Exception as e:
-        print(f"❌ Erro ao inicializar tabelas: {str(e)}")
 
-# Chame a função logo após definir o app do Flask para rodar no deploy
-inicializar_banco()
+def inicializar_banco():
+    """Garante as tabelas na nuvem apenas se a conexão for bem sucedida"""
+    # Só roda a criação se estivermos no Render ou com banco ativo
+    if os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"):
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                    id SERIAL PRIMARY KEY,
+                    ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS simulados (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INT,
+                    materia VARCHAR(100),
+                    nota INT,
+                    data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            print("✅ [BANCO] Tabelas validadas com sucesso na Nuvem!")
+        except Exception as e:
+            print(f"❌ [ERRO BANCO] Falha ao criar tabelas iniciais: {str(e)}")
 
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
@@ -807,19 +797,7 @@ def checar_status():
 # 🟢 1. Coloque a rota raiz AQUI (Antes do IF)
 @app.route('/')
 def home():
-    # Coleta todas as chaves de ambiente reais que o Python está lendo na nuvem
-    chaves_reais = list(os.environ.keys())
-    
-    # Verifica se existe algo parecido com DATABASE_URL
-    possui_database = "DATABASE_URL" in os.environ
-    possui_private = "DATABASE_PRIVATE_URL" in os.environ
-    
-    return {
-        "status": "online",
-        "DATABASE_URL_EXISTE_NO_PYTHON?": possui_database,
-        "DATABASE_PRIVATE_URL_EXISTE?": possui_private,
-        "todas_as_chaves_detectadas": chaves_reais
-    }, 200
+    return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
 
 # 🟡 2. O bloco IF deve ser a ÚLTIMA coisa do arquivo
 if __name__ == '__main__':
