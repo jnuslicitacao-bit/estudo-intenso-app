@@ -24,33 +24,30 @@ import pg8000
 def get_db_connection():
     """Conecta ao banco PostgreSQL priorizando o ambiente real do Render"""
     
-    # 🌟 PASSO 1: Lê direto do dicionário do sistema operacional (Evita o bug do dotenv)
-    database_url = os.environ.get("DATABASE_URL")
+    database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
     
-    # 🌟 PASSO 2: Se o pacote dotenv tiver limpado a chave anterior, 
-    # nós pegamos a chave secreta idêntica que o Render cria por padrão nos bastidores
     if not database_url:
-        database_url = os.environ.get("postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db")
+        database_url = os.environ.get("DATABASE_PRIVATE_URL")
 
-    # Limpa possíveis espaços que quebram o link
     if database_url:
         database_url = database_url.strip()
 
-    # Se encontramos a URL da Nuvem
     if database_url and "localhost" not in database_url:
         try:
             print("🚀 [CONEXÃO] URL de Produção detectada! Conectando ao Postgres do Render...")
-            return pg8000.connect(dsn=database_url)
+            
+            # 🌟 CORREÇÃO AQUI: Passamos a URL usando o método correto da biblioteca pg8000
+            return pg8000.from_url(database_url)
+            
         except Exception as e:
             print(f"❌ [ERRO] Falha ao conectar na URL do Render: {str(e)}")
             raise e
             
-    # Se falhar ou não achar (Significa que você está rodando na sua máquina local)
     else:
         print("💻 [CONEXÃO] Nenhuma URL de nuvem encontrada. Conectando ao Postgres Local...")
         return pg8000.connect(
             user="administrador",
-            password="SuaSenhaLocalAqui", # Coloque a sua senha do Postgres local se necessário
+            password="SuaSenhaLocalAqui",
             host="localhost",
             port=5432,
             database="estudo_intensivo_db"
