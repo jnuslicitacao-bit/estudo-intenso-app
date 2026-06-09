@@ -23,10 +23,8 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_db_connection():
     """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
-    # 1. Tenta pegar a variável oficial automática do Render
     database_url = os.environ.get("DATABASE_URL")
     
-    # 2. Se ela não estiver preenchida (Fallback manual blindado)
     if not database_url:
         database_url = "postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"
     
@@ -50,7 +48,7 @@ def inicializar_banco():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Tabela de controle (Sintaxe SQL corrigida)
+        # 1. Tabela de controle
         cur.execute("""
             CREATE TABLE IF NOT EXISTS controle_atualizacao (
                 id SERIAL PRIMARY KEY,
@@ -435,7 +433,7 @@ def obter_desempenho():
     
 @app.route('/api/temas', methods=['GET'])
 def obter_temas_redacao():
-    """Busca os temas de redação direto no banco de dados de forma simplificada"""
+    """Busca os temas de redação direto no banco de dados de forma simplificada e dinâmica"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -449,11 +447,9 @@ def obter_temas_redacao():
         """)
         conn.commit()
 
-        cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
-        temas_banco = cur.fetchall()
-
-        # Se a tabela estiver vazia, coloca dados iniciais na hora (Expandido com novos temas)
-        if not temas_banco:
+        # ✅ ALINHAMENTO CIRÚRGICO DA VALIDAÇÃO E INSERÇÃO DOS NOVOS TEMAS
+        cur.execute("SELECT COUNT(*) FROM temas_redacao;")
+        if cur.fetchone()[0] < 5:
             cur.execute("""
                 INSERT INTO temas_redacao (titulo, textos_motivadores) VALUES 
                 ('O impacto da inteligência artificial na educação do século XXI', 'Texto 1: A tecnologia avança rápido... Texto 2: Dados mostram que o uso de ferramentas de IA cresceu 40% nas escolas...'),
@@ -461,12 +457,12 @@ def obter_temas_redacao():
                 ('Democratização do acesso ao cinema no Brasil', 'Texto 1: O cinema como ferramenta de inclusão... Texto 2: Grandes centros concentram a maioria das salas de exibição...'),
                 ('Invisibilidade e registro civil: garantia de acesso à cidadania no Brasil', 'Texto 1: Milhares de brasileiros não possuem certidão de nascimento... Texto 2: Sem documento, o cidadão não existe para o Estado...'),
                 ('Desafios para a valorização de comunidades e povos tradicionais no Brasil', 'Texto 1: A cultura indígena e quilombola enfrenta ameaças... Texto 2: A demarcação de terras e o respeito às tradições são garantias constitucionais...')
-                ON CONFLICT DO NOTHING;
+                ON CONFLICT (titulo) DO NOTHING;
             """)
             conn.commit()
             
-            cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
-            temas_banco = cur.fetchall()
+        cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
+        temas_banco = cur.fetchall()
 
         cur.close()
         conn.close()
@@ -555,9 +551,14 @@ def status_sistema():
         resultado = cur.fetchone()
         
         if not resultado:
+            cur.close()
+            conn.close()
             return jsonify({"status": "desatualizado", "ultima": "Nunca"}), 200
             
         ultima_data = resultado[0]
+        cur.close()
+        conn.close()
+
         if datetime.now() - ultima_data > timedelta(days=2):
             return jsonify({"status": "desatualizado", "ultima": ultima_data.strftime('%d/%m/%Y %H:%M')}), 200
             
@@ -568,7 +569,7 @@ def status_sistema():
 
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
-    """IA gera novos pacotes de simulados gerais para alimentar o banco de dados na nuvem"""
+    """IA generates new general mock test packages to feed the cloud database"""
     try:
         prompt = """
         Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
@@ -696,7 +697,7 @@ def comentar_questao_ia():
     O aluno marcou a alternativa: {resposta_aluno}
     O gabarito correto é a alternativa: {resposta_correta}
     
-    Dê uma explicação cirúrgica, em no máximo 4 linhas, explicando por que a alternativa {resposta_correta} está correta e por que a resposta do aluno faz sentido ou onde ele se confundiu (caso ele tenha errado). Seja direto e use tom encorajador.
+    Dê uma explicação cirúrgica, em no máximo 4 linhas, explicando por que a alternativa {resposta_correta} está correta e por que a resposta do aluno faz sentido ou onde ele se confundiu (caso ele tenha errado). Seja direto e use tom encorarador.
     """
 
     try:
@@ -716,7 +717,6 @@ def comentar_questao_ia():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
-# Rota raiz colocada de forma correta antes do bloco IF principal
 @app.route('/')
 def home():
     return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
