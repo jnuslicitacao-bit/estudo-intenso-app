@@ -16,6 +16,7 @@
             --card-bg: #ffffff;
             --border-color: #e2e8f0;
             --warning-dark: #b45309;
+            --success: #10b981;
         }
 
         body {
@@ -160,13 +161,15 @@
 
 <div class="container">
     <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
-    <h2>Laboratório de Redação Dissertativa</h2>
-    <p class="desc-top">Submeta seu texto e receba imediatamente um parecer de inteligência artificial construído nos critérios analíticos das 5 competências oficiais.</p>
+    <h2 id="principal-titulo">Laboratório de Redação Dissertativa</h2>
+    <p id="principal-desc" class="desc-top">Submeta seu texto e receba imediatamente um parecer de inteligência artificial construído nos critérios analíticos das 5 competências oficiais.</p>
 
-    <label style="font-weight: 600; color: var(--text-main); display: block; margin-bottom: 8px;" for="seletor-temas">Escolha a Proposta de Redação:</label>
-    <select id="seletor-temas" onchange="atualizarTextosMotivadores()">
-        <option value="">Carregando temas disponíveis...</option>
-    </select>
+    <div id="bloco-interacao-temas">
+        <label style="font-weight: 600; color: var(--text-main); display: block; margin-bottom: 8px;" for="seletor-temas">Escolha a Proposta de Redação:</label>
+        <select id="seletor-temas" onchange="atualizarTextosMotivadores()">
+            <option value="">Carregando temas disponíveis...</option>
+        </select>
+    </div>
 
     <div class="layout-redacao">
         <div class="painel-apoio">
@@ -181,6 +184,8 @@
             <button id="btn-enviar-redacao" class="btn-enviar" onclick="enviarRedacaoParaCorrigir()" disabled>🚀 Enviar para Correção IA</button>
         </div>
     </div>
+
+    <div id="bloco-resultado-ia" style="display: none; margin-top: 15px; flex-direction: column; gap: 20px;"></div>
 </div>
 
 <script>
@@ -235,7 +240,6 @@
         
         const botao = document.getElementById('btn-enviar-redacao');
         
-        // ✅ Corrigido o comentário e a validação do botão em tempo real
         if (idTema && txt.trim().length >= 150 && linhas >= 7) {
             botao.disabled = false;
         } else {
@@ -261,34 +265,36 @@
 
             const res = await r.json();
             if (r.ok) {
-                // Em vez de dar o redirect imediato para o dashboard, exibimos o resultado completo e o modelo na tela!
+                // Oculta a área de escrita de forma limpa
                 document.querySelector('.layout-redacao').style.display = 'none';
+                document.getElementById('bloco-interacao-temas').style.display = 'none';
+                document.getElementById('principal-desc').style.display = 'none';
                 
-                // Cria um painel completo de exibição de resultados dinamicamente na tela do aluno
-                const containerPrincipal = document.querySelector('.container');
-                const painelResultado = document.createElement('div');
-                painelResultado.style.cssText = "margin-top: 25px; display: flex; flex-direction: column; gap: 20px;";
+                document.getElementById('principal-titulo').innerText = "Espelho de Desempenho e Modelo Estrutural";
+
+                // Renderiza o painel completo de resultados e o modelo pronto Nota 1000
+                const painelResultado = document.getElementById('bloco-resultado-ia');
+                painelResultado.style.display = 'flex';
                 
                 painelResultado.innerHTML = `
                     <div style="background: #f0fdf4; border: 1px solid #a7f3d0; padding: 25px; border-radius: 12px; text-align: center;">
-                        <h2 style="color: var(--success); margin: 0 0 10px 0;">🎉 Correção Concluída com Sucesso!</h2>
+                        <h3 style="color: var(--success); margin: 0 0 10px 0; font-size: 20px;">🎉 Correção Concluída!</h3>
                         <span style="font-size: 48px; font-weight: 800; color: var(--primary);">${res.nota} / 1000</span>
                     </div>
                     
                     <div style="background: #fff; border: 1px solid var(--border-color); padding: 25px; border-radius: 12px;">
-                        <h3 style="margin-top:0; color: var(--text-main);">📋 Avaliação das Competências</h3>
-                        <p style="white-space: pre-wrap; line-height: 1.6; color: #334155;">${res.feedback}</p>
+                        <h3 style="margin-top:0; color: var(--text-main); font-size:18px;">📋 Parecer das Competências</h3>
+                        <p style="white-space: pre-wrap; line-height: 1.6; color: #334155; margin: 0;">${res.feedback}</p>
                     </div>
                     
-                    <div style="background: #fff; border: 2px dashed #8b5cf6; padding: 25px; border-radius: 12px; background-color: #f5f3ff;">
-                        ${res.modelo_nota_1000}
+                    <div style="border: 2px dashed #8b5cf6; padding: 25px; border-radius: 12px; background-color: #f5f3ff; line-height: 1.6;">
+                        ${res.modelo_nota_1000 || "<h3>🏗️ Modelo de Redação Pronta</h3><p>Modelo indisponível para este tema.</p>"}
                     </div>
                     
-                    <button class="btn-enviar" onclick="window.location.href='index.html'" style="background-color: var(--primary);">
-                        Voltar ao Dashboard Central →
+                    <button class="btn-enviar" onclick="window.location.href='index.html'" style="background-color: var(--primary); box-shadow: none;">
+                        Retornar ao Dashboard Central →
                     </button>
                 `;
-                containerPrincipal.appendChild(painelResultado);
             } else {
                 alert("Erro reportado: " + res.mensagem);
                 botao.disabled = false;
