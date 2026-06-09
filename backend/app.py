@@ -452,11 +452,15 @@ def obter_temas_redacao():
         cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
         temas_banco = cur.fetchall()
 
+        # Se a tabela estiver vazia, coloca dados iniciais na hora (Expandido com novos temas)
         if not temas_banco:
             cur.execute("""
                 INSERT INTO temas_redacao (titulo, textos_motivadores) VALUES 
                 ('O impacto da inteligência artificial na educação do século XXI', 'Texto 1: A tecnologia avança rápido... Texto 2: Dados mostram que o uso de ferramentas de IA cresceu 40% nas escolas...'),
-                ('Caminhos para combater a evasão escolar no Brasil contemporâneo', 'Texto 1: A pandemia intensificou a saída de jovens... Texto 2: O principal fator é a necessidade de trabalhar...')
+                ('Caminhos para combater a evasão escolar no Brasil contemporâneo', 'Texto 1: A pandemia intensificou a saída de jovens... Texto 2: O principal fator é a necessidade de trabalhar...'),
+                ('Democratização do acesso ao cinema no Brasil', 'Texto 1: O cinema como ferramenta de inclusão... Texto 2: Grandes centros concentram a maioria das salas de exibição...'),
+                ('Invisibilidade e registro civil: garantia de acesso à cidadania no Brasil', 'Texto 1: Milhares de brasileiros não possuem certidão de nascimento... Texto 2: Sem documento, o cidadão não existe para o Estado...'),
+                ('Desafios para a valorização de comunidades e povos tradicionais no Brasil', 'Texto 1: A cultura indígena e quilombola enfrenta ameaças... Texto 2: A demarcação de terras e o respeito às tradições são garantias constitucionais...')
                 ON CONFLICT DO NOTHING;
             """)
             conn.commit()

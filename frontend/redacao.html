@@ -62,7 +62,7 @@
             padding: 14px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            font-size: 16px; /* Impede zoom indesejado */
+            font-size: 16px;
             margin-bottom: 25px;
             background-color: #fff;
             box-sizing: border-box;
@@ -96,7 +96,7 @@
             padding: 20px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            font-size: 16px; /* Melhor legibilidade e impede zoom no iOS */
+            font-size: 16px;
             font-family: 'Courier New', Courier, monospace;
             resize: none;
             box-sizing: border-box;
@@ -148,26 +148,11 @@
             font-weight: 500;
         }
 
-        /* 📱 MEDIA QUERIES PARA CELULARES */
         @media (max-width: 800px) {
-            body {
-                padding: 15px 10px;
-            }
-
-            .container {
-                padding: 25px 15px;
-                border-radius: 12px;
-            }
-
-            .layout-redacao {
-                grid-template-columns: 1fr; /* Desmancha as duas colunas do desktop */
-                gap: 20px;
-            }
-
-            textarea {
-                height: 320px; /* Reduz ligeiramente para acomodar o teclado do celular */
-                padding: 15px;
-            }
+            body { padding: 15px 10px; }
+            .container { padding: 25px 15px; border-radius: 12px; }
+            .layout-redacao { grid-template-columns: 1fr; gap: 20px; }
+            textarea { height: 320px; padding: 15px; }
         }
     </style>
 </head>
@@ -224,28 +209,38 @@
         }
     }
 
-    function actualizarTextosMotivadores() {
+    function atualizarTextosMotivadores() {
         const id = document.getElementById('seletor-temas').value;
         const painel = document.getElementById('textos-motivadores');
-        const botao = document.getElementById('btn-enviar-redacao');
         
         if (!id) {
             painel.innerText = "Selecione um tema acima para exibir os textos de apoio.";
-            botao.disabled = true;
+            document.getElementById('btn-enviar-redacao').disabled = true;
             return;
         }
 
         const tema = listaDeTemas.find(t => t.id == id);
         if (tema) {
             painel.innerText = tema.textos_motivadores;
-            botao.disabled = false; 
+            contarLinhas();
         }
     }
 
     function contarLinhas() {
         const txt = document.getElementById('texto-redacao').value;
+        const idTema = document.getElementById('seletor-temas').value;
+        
         const linhas = txt.split('\n').filter(l => l.trim().length > 0).length;
         document.getElementById('contador-linhas').innerText = `Linhas estimadas: ${linhas} / Mínimo: 7`;
+        
+        const botao = document.getElementById('btn-enviar-redacao');
+        
+        // ✅ Corrigido o comentário e a validação do botão em tempo real
+        if (idTema && txt.trim().length >= 150 && linhas >= 7) {
+            botao.disabled = false;
+        } else {
+            botao.disabled = true;
+        }
     }
 
     async function enviarRedacaoParaCorrigir() {
@@ -253,11 +248,6 @@
         const tituloTema = seletor.options[seletor.selectedIndex].text;
         const textoDigitado = document.getElementById('texto-redacao').value;
         const botao = document.getElementById('btn-enviar-redacao');
-
-        if (textoDigitado.trim().length < 150) {
-            alert("Sua redação está muito curta!");
-            return;
-        }
 
         botao.disabled = true;
         botao.innerText = "🤖 OpenAI analisando competências... Aguarde...";
@@ -279,6 +269,7 @@
                 botao.innerText = "🚀 Enviar para Correção IA";
             }
         } catch (e) {
+            console.error("Erro na requisição da redação:", e);
             alert("Erro crítico de comunicação.");
             botao.disabled = false;
             botao.innerText = "🚀 Enviar para Correção IA";
