@@ -804,8 +804,13 @@ def auth_callback():
         
         # Transmite os dados de login de volta para o seu Frontend via parâmetros na URL de sucesso
         frontend_url = "http://127.0.0.1:5500/frontend/index.html" 
+        # 🌟 DETECÇÃO DINÂMICA DE URL (Evita o erro de Domains, protocols and ports must match)
         if os.environ.get("RENDER"):
-            frontend_url = "https://seu-frontend-no-render.com/index.html" # Altere para a sua URL real de produção
+            # Se estiver rodando no Render, redireciona para o seu site oficial no ar
+            frontend_url = "https://estudo-intenso.onrender.com/index.html"
+        else:
+            # Se estiver rodando no seu computador (Local), usa a porta do seu Live Server
+            frontend_url = "http://127.0.0.1:5500/frontend/index.html"
             
         return f"""
         <script>
