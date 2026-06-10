@@ -408,6 +408,30 @@
     </main>
 
 <script>
+
+    // 🌟 SCRIPT DE VERIFICAÇÃO ATUALIZADO NO TOPO DO INDEX.HTML
+    (function verificarAutenticacao() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const socialId = urlParams.get('id');
+        const socialNome = urlParams.get('nome');
+        const isSocial = urlParams.get('social');
+
+        // Se veio do login do Google, intercepta os dados e salva localmente antes da trava rodar
+        if (isSocial === "true" && socialId && socialNome) {
+            const usuarioSocial = { id: parseInt(socialId), nome: decodeURIComponent(socialNome) };
+            localStorage.setItem('usuario_estudo', JSON.stringify(usuarioSocial));
+            
+            // Limpa os parâmetros da URL para o link ficar bonito novamente
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Trava de segurança padrão
+        const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
+        if (!dadosUsuario) { 
+            window.location.href = 'login.html'; 
+        }
+    })();
+
     // --- SEGURANÇA E SESSÃO ---
     const dadosUsuario = localStorage.getItem('usuario_estudo');
     if (!dadosUsuario) { window.location.href = 'login.html'; }

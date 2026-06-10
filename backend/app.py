@@ -804,18 +804,20 @@ def auth_callback():
         
         # Transmite os dados de login de volta para o seu Frontend via parâmetros na URL de sucesso
         frontend_url = "http://127.0.0.1:5500/frontend/index.html" 
-        # 🌟 DETECÇÃO DINÂMICA DE URL (Evita o erro de Domains, protocols and ports must match)
+        # Detecção dinâmica de URL
         if os.environ.get("RENDER"):
-            # Se estiver rodando no Render, redireciona para o seu site oficial no ar
             frontend_url = "https://estudo-intenso.onrender.com/index.html"
         else:
-            # Se estiver rodando no seu computador (Local), usa a porta do seu Live Server
             frontend_url = "http://127.0.0.1:5500/frontend/index.html"
             
+        # 🌟 NOVA ESTRATÉGIA: Envia o ID e o Nome direto na URL de redirecionamento HTTP
+        # Isso impede que o navegador bloqueie a gravação por restrições de iframe/OAuth
+        import urllib.parse
+        nome_codificado = urllib.parse.quote(user_nome)
+        
         return f"""
         <script>
-            localStorage.setItem('usuario_estudo', JSON.stringify({{ id: {user_id}, nome: '{user_nome}' }}));
-            window.location.href = '{frontend_url}';
+            window.location.href = "{frontend_url}?id={user_id}&nome={nome_codificado}&social=true";
         </script>
         """
     except Exception as e:
