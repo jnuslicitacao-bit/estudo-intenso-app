@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudo Intensivo - Simulados IA</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <script src="config.js"></script>
     <style>
         :root {
@@ -209,34 +210,12 @@
 
         /* 📱 DESIGN RESPONSIVO INTERNO MÓVEL */
         @media (max-width: 650px) {
-            body {
-                padding: 15px 10px;
-            }
-            
-            .container {
-                padding: 20px 15px;
-                border-radius: 12px;
-            }
-
-            .pomodoro-box {
-                flex-direction: column;
-                text-align: center;
-                padding: 15px;
-                gap: 12px;
-            }
-            
-            .btn-timer-action {
-                width: 100%;
-            }
-
-            .enunciado-text {
-                font-size: 16px;
-            }
-
-            .btn-opcao {
-                padding: 14px 16px;
-                font-size: 14px;
-            }
+            body { padding: 15px 10px; }
+            .container { padding: 20px 15px; border-radius: 12px; }
+            .pomodoro-box { flex-direction: column; text-align: center; padding: 15px; gap: 12px; }
+            .btn-timer-action { width: 100%; }
+            .enunciado-text { font-size: 16px; }
+            .btn-opcao { padding: 14px 16px; font-size: 14px; }
             
             div[style*="display: flex; justify-content: space-between;"] {
                 flex-direction: column;
@@ -315,6 +294,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <script>
     const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
     if (!dadosUsuario) { window.location.href = 'login.html'; }
@@ -370,7 +351,7 @@
         }
     }
 
-    // --- 🌟 MOTOR DE BUSCA COM IA E EDITAL ADAPTADOS ---
+    // --- MOTOR DE BUSCA COM IA ---
     async function iniciarSimuladoIA() {
         const bancaAlvo = document.getElementById('busca-banca').value.trim();
         const btnIa = document.getElementById('btn-gerar-ia');
@@ -387,7 +368,6 @@
             });
             const dadosRecebidos = await r.json();
             
-            // Atribui as questões mapeadas do nó do objeto JSON retornado
             questoes = dadosRecebidos.questoes;
             const blocoEdital = document.getElementById('painel-edital-ia');
             
@@ -395,7 +375,6 @@
                 modoIAAtivo = true;
                 document.getElementById('titulo-simulado').innerText = `Banca Alvo: ${bancaAlvo}`;
                 
-                // Trata e exibe o edital se ele vier preenchido pela IA
                 if (dadosRecebidos.edital_conteudo) {
                     blocoEdital.innerHTML = dadosRecebidos.edital_conteudo;
                     blocoEdital.style.display = 'block';
@@ -422,7 +401,6 @@
     }
 
     async function iniciarSimuladoTradicional() {
-        // Esconde o painel do edital se o usuário optar pela prova estática comum
         document.getElementById('painel-edital-ia').style.display = 'none';
         
         const mat = document.getElementById('filtro-materia').value;
@@ -479,7 +457,8 @@
         document.getElementById('btn-proxima').disabled = false;
     }
 
-    function proximaQuestao() {
+    // --- PROCESSAMENTO FINAL INTEGRADO À GAMIFICAÇÃO MILITAR ---
+    async function proximaQuestao() {
         indexAtual++;
         if (indexAtual < questoes.length) {
             exibirQuestao();
@@ -492,15 +471,31 @@
 
             const notaPorcentagem = Math.round((acertos / questoes.length) * 100);
 
-            fetch(`${CONFIG.URL_BACKEND}/api/simulado/salvar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    usuario_id: dadosUsuario.id,
-                    materia: modoIAAtivo ? "Banca Inteligente IA" : questoes[0].materia,
-                    nota: notaPorcentagem
-                })
-            });
+            // ⏱️ BÔNUS DE VELOCIDADE: Avalia se concluiu em menos de 80% do tempo (Sobra mais de 5 minutos)
+            const sobrouTempoFoco = emModoFoco && (tempoRestante > (5 * 60));
+
+            try {
+                // Sincroniza a nota, bônus e solicita os retornos de XP militares
+                const respostaSalvar = await fetch(`${CONFIG.URL_BACKEND}/api/simulado/salvar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario_id: dadosUsuario.id,
+                        materia: modoIAAtivo ? "Banca Inteligente IA" : questoes[0].materia,
+                        nota: notaPorcentagem,
+                        completou_rapido: sobrouTempoFoco
+                    })
+                });
+
+                const dadosMilitares = await respostaSalvar.json();
+
+                // Dispara animações de confete e alertas táticos de XP
+                if (respostaSalvar.ok && dadosMilitares.status === "sucesso") {
+                    exibirResultadoMilitar(dadosMilitares);
+                }
+            } catch (e) {
+                console.error("Falha ao computar XP militar secundário:", e);
+            }
 
             document.getElementById('bloco-questoes-simulado').style.display = 'none';
             document.getElementById('bloco-revisao-gabarito').style.display = 'block';
@@ -530,6 +525,23 @@
                 `;
                 container.appendChild(box);
             });
+        }
+    }
+
+    // --- ANIMAÇÃO VISUAL MILITAR DE CONQUISTAS ---
+    function exibirResultadoMilitar(respostaServidor) {
+        if (respostaServidor.xp_ganho > 0) {
+            if (respostaServidor.promocao) {
+                // Explosão massiva de confetes por promoção de Patente
+                confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+                alert(` 🎖️ PARABÉNS, GUERREIRO! Por ordem do Estado-Maior, você foi promovido para a patente de: ${respostaServidor.nova_patente}!`);
+            } else {
+                // Pequena explosão de comemoração apenas por rendimento aceitável e ganho de XP base
+                confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+                alert(`🎯 +${respostaServidor.xp_ganho} XP adquiridos de forma meritória!\n\nIA militar: "${respostaServidor.feedback_ia}"`);
+            }
+        } else {
+            alert(`📋 Caderno avaliado.\n\nIA militar: "Continue marchando, recruta. A disciplina vence o talento quando o talento não se disciplina."`);
         }
     }
 
