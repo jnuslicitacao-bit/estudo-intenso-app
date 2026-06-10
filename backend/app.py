@@ -8,6 +8,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+# Adicione esta importação no topo do app.py
+from gamificacao import calcular_patente, processar_xp_simulado, processar_xp_redacao, obter_feedback_militar
 
 # 🌟 SÓ CARREGA O .ENV SE ESTIVER LOCALMENTE (Impede o bug de apagar as variáveis no Render)
 if not os.environ.get("RENDER"):
@@ -54,6 +56,49 @@ def get_db_connection():
             database="estudo_intensivo_db"
         )
 
+def init_db():
+    """Cria ou atualiza a estrutura do banco de dados para a gamificação militar"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Adiciona as colunas militares na tabela de usuários caso não existam
+        cur.execute("""
+            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS xp INT DEFAULT 0;
+            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS patente VARCHAR(50) DEFAULT 'Recruta';
+            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS streak_atual INT DEFAULT 0;
+            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ultima_atividade DATE DEFAULT CURRENT_DATE;
+        """)
+        
+        # 2. Cria a tabela de conquistas/medalhas dos soldados
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS conquistas_usuario (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                titulo_conquista VARCHAR(100) NOT NULL,
+                descricao TEXT,
+                data_ganha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(usuario_id, titulo_conquista)
+            );
+        """)
+        
+        # 3. Cria a tabela de simulados realizados (caso ainda não tenha criado antes)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS simulados_realizados (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                materia VARCHAR(100) NOT NULL,
+                nota INT NOT NULL,
+                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("🎖️ Banco de dados militar sincronizado com sucesso!")
+    except Exception as e:
+        print(f"❌ Erro ao inicializar o banco de dados: {e}")
 
 def inicializar_banco():
     """Garante as tabelas na nuvem com SQL correto para PostgreSQL"""
@@ -230,14 +275,15 @@ def obter_questoes():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
+# Modifique a rota /api/simulado/salvar existente para injetar o XP automaticamente:
 @app.route('/api/simulado/salvar', methods=['POST'])
 def salvar_simulado():
-    """Garante a criação da tabela de histórico e salva o desempenho do aluno na nuvem"""
     try:
         dados = request.get_json()
         usuario_id = dados.get('usuario_id')
         materia = dados.get('materia', 'Geral')
-        nota = dados.get('nota', 0)
+        nota = dados.get('nota', 0) # Entra como percentual (0 a 100)
+        tempo_rapido = dados.get('completou_rapido', False)
 
         if not usuario_id:
             return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
@@ -245,31 +291,53 @@ def salvar_simulado():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS simulados_realizados (
-                id SERIAL PRIMARY KEY,
-                usuario_id INTEGER NOT NULL,
-                materia VARCHAR(100) NOT NULL,
-                nota INTEGER NOT NULL,
-                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
+        # Verifica se é o primeiro simulado do dia para aplicar o bônus
+        cur.execute("SELECT COUNT(*) FROM simulados_realizados WHERE usuario_id = %s AND data_realizacao::DATE = CURRENT_DATE;", (usuario_id,))
+        primeiro_do_dia = cur.fetchone()[0] == 0
 
+        # Calcula o XP ganho pelas regras militares
+        xp_ganho, medalhas = processar_xp_simulado(nota, tempo_rapido, primeiro_do_dia)
+
+        # Salva o simulado no histórico
         cur.execute(
-            """INSERT INTO simulados_realizados (usuario_id, materia, nota) 
-               VALUES (%s, %s, %s);""",
+            "INSERT INTO simulados_realizados (usuario_id, materia, nota) VALUES (%s, %s, %s);",
             (usuario_id, materia, nota)
         )
-        conn.commit()
+
+        # Atualiza o XP e Patente do Usuário se ele ganhou pontos
+        promocao = False
+        nova_patente = "Recruta"
+        if xp_ganho > 0:
+            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp;", (xp_ganho, usuario_id))
+            novo_xp = cur.fetchone()[0]
+            
+            nova_patente = calcular_patente(novo_xp)
+            cur.execute("SELECT patente FROM usuarios WHERE id = %s;", (usuario_id,))
+            patente_antiga = cur.fetchone()[0]
+            
+            if nova_patente != patente_antiga:
+                cur.execute("UPDATE usuarios SET patente = %s WHERE id = %s;", (nova_patente, usuario_id))
+                promocao = True
+
+            # Insere as medalhas conquistadas, se houver
+            for medalha in medalhas:
+                cur.execute("INSERT INTO conquistas_usuario (usuario_id, titulo_conquista) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (usuario_id, medalha))
+
+        # Atualiza o Streak (Amanhã faremos a rota completa de controle diário)
+        cur.execute("UPDATE usuarios SET streak_atual = streak_atual + 1, ultima_atividade = CURRENT_DATE WHERE id = %s;", (usuario_id,))
         
+        conn.commit()
         cur.close()
         conn.close()
-        print(f"📊 Nota {nota}% em {materia} salva com sucesso na nuvem!")
-        return jsonify({"status": "sucesso", "mensagem": "Resultado salvo com sucesso!"}), 201
 
+        return jsonify({
+            "status": "sucesso",
+            "xp_ganho": xp_ganho,
+            "promocao": promocao,
+            "nova_patente": nova_patente,
+            "feedback_ia": obter_feedback_militar(nota, "simulado")
+        }), 201
     except Exception as e:
-        print(f"❌ ERRO AO SALVAR SIMULADO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
@@ -824,6 +892,33 @@ def auth_callback():
         print(f"❌ ERRO NO CALLBACK DO GOOGLE: {str(e)}")
         return f"Falha na autenticação: {str(e)}", 500
 
+@app.route('/api/ranking', methods=['GET'])
+def obter_ranking():
+    """Retorna os melhores soldados posicionados por mérito de XP"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT nome, patente, xp, streak_atual 
+            FROM usuarios 
+            ORDER BY xp DESC 
+            LIMIT 10;
+        """)
+        usuarios_ranking = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        lista_ranking = []
+        for u in usuarios_ranking:
+            lista_ranking.append({
+                "nome": u[0],
+                "patente": u[1],
+                "xp": u[2],
+                "streak": u[3]
+            })
+        return jsonify(lista_ranking), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route('/')
 def home():
@@ -831,5 +926,8 @@ def home():
 
 
 if __name__ == '__main__':
-    porta = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=porta)
+    # Executa a migração das tabelas antes de ligar o servidor
+    init_db() 
+    
+    # Liga o aplicativo localmente
+    app.run(debug=True, port=5000)
