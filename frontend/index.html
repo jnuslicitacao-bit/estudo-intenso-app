@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <link rel="icon" href="data:,">
-    <link rel="icon" type="image/x-icon" href="favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudo Intensivo - Painel de Alta Performance</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <script src="config.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
+            --primary-hover: #4338ca;
             --primary-light: #eff6ff;
             --text-main: #0f172a;
             --text-muted: #64748b;
@@ -29,6 +29,110 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* 🪖 ESTILOS DO SISTEMA MILITAR GAMIFICADO */
+        .military-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 25px;
+        }
+
+        .military-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .rank-badge {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 1px solid #fde68a;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .streak-badge {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ea580c;
+        }
+
+        /* Barra de Progresso Militar */
+        .xp-container { margin: 20px 0; }
+        .xp-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .xp-bar-bg {
+            background: #e2e8f0;
+            height: 12px;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .xp-bar-fill {
+            background: linear-gradient(90deg, #4f46e5, #818cf8);
+            height: 100%;
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+
+        /* Medalhas */
+        .medal-box {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .medal-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Tabela do Ranking */
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .ranking-table th {
+            text-align: left;
+            padding: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border-color);
+        }
+        .ranking-table td {
+            padding: 12px 10px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .ranking-row-top { background: #faf5ff; font-weight: 600; }
+
         /* BARRA SUPERIOR DE STATUS CRÍTICO */
         .top-sync-bar {
             background-color: #ecfdf5;
@@ -44,7 +148,6 @@
             gap: 10px;
         }
         
-        /* Estado quando o sistema detecta pacotes expirados */
         .top-sync-bar.desatualizado {
             background-color: #fef2f2;
             border-bottom: 1px solid #fecaca;
@@ -256,7 +359,6 @@
             box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
         }
 
-        /* CONTROLE DE LOGOUT INTERNO */
         .btn-logout-footer {
             background: none;
             border: none;
@@ -267,7 +369,7 @@
         }
         .btn-logout-footer:hover { color: var(--danger); }
 
-        /* 📱 MEDIA QUERIES - RESPONSIVIDADE MOBILE COMPLETA */
+        /* 📱 RESPONSIVIDADE MOBILE COMPLETA */
         @media (max-width: 900px) {
             header {
                 flex-direction: column;
@@ -284,9 +386,13 @@
             }
             
             .wrapper {
-                grid-template-columns: 1fr; /* Muda de colunas laterais para empilhado */
+                grid-template-columns: 1fr;
                 margin: 15px auto;
                 gap: 20px;
+            }
+
+            .military-grid {
+                grid-template-columns: 1fr;
             }
 
             .footer-insight {
@@ -312,22 +418,15 @@
                 border-radius: 12px;
             }
 
-            .hero-banner h2 {
-                font-size: 22px;
-            }
-
-            .hero-banner p {
-                font-size: 14px;
-            }
+            .hero-banner h2 { font-size: 22px; }
+            .hero-banner p { font-size: 14px; }
 
             .grid-modulos {
-                grid-template-columns: 1fr; /* Empilha os cards de Simulado e Redação */
+                grid-template-columns: 1fr;
                 gap: 15px;
             }
 
-            .card-home {
-                padding: 20px;
-            }
+            .card-home { padding: 20px; }
 
             .footer-insight {
                 flex-direction: column;
@@ -362,7 +461,56 @@
 
     <main class="wrapper">
         
-        <section>
+        <section style="display: flex; flex-direction: column; gap: 2px;">
+            
+            <div class="military-grid">
+                <div class="military-card">
+                    <div class="profile-header">
+                        <div>
+                            <h2 id="militar-nome" style="margin:0; font-size: 22px;">Carregando...</h2>
+                            <span id="militar-patente" class="rank-badge">Recruta</span>
+                        </div>
+                        <div class="streak-badge" title="Sequência de estudos diária">
+                            <span id="militar-streak">0</span> Os 🔥
+                        </div>
+                    </div>
+
+                    <div class="xp-container">
+                        <div class="xp-text">
+                            <span>Progresso da Carreira militar</span>
+                            <span id="xp-num">0 / 500 XP</span>
+                        </div>
+                        <div class="xp-bar-bg">
+                            <div id="xp-bar" class="xp-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 25px; font-size: 16px; margin-bottom: 5px;">🎖️ Medalhas de Mérito</h3>
+                    <div id="militar-medalhas" class="medal-box">
+                        <span style="color: var(--text-muted); font-size: 14px;">Nenhuma medalha conquistada ainda.</span>
+                    </div>
+                </div>
+
+                <div class="military-card">
+                    <h3 style="margin: 0 0 5px 0; font-size: 18px;">🏆 Classificação Geral</h3>
+                    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Os melhores estrategistas da plataforma</p>
+                    
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Guerreiro</th>
+                                <th>Patente</th>
+                                <th>XP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-corpo">
+                            <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Carregando dados...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="hero-banner">
                 <h2>Estudo Intensivo: Seu Caminho para a Aprovação</h2>
                 <p>Monitore sua evolução através de engenharia pedagógica adaptativa. Nossos algoritmos geram cadernos customizados para otimizar o seu tempo de absorção.</p>
@@ -376,7 +524,7 @@
                 </a>
                 <a href="redacao.html" class="card-home redacao">
                     <h4>✍️ Laboratório de Redação Nota 1000</h4>
-                    <p>Submeta seu text argumentativo e receba imediatamente a correção detalhada por competências no padrão ENEM.</p>
+                    <p>Submeta seu texto argumentativo e receba imediatamente a correção detalhada por competências no padrão ENEM.</p>
                 </a>
             </div>
         </section>
@@ -408,37 +556,123 @@
     </main>
 
 <script>
+    // --- SEGURANÇA E SESSÃO ---
+    let usuario = null;
 
-    // 🌟 SCRIPT DE VERIFICAÇÃO ATUALIZADO NO TOPO DO INDEX.HTML
     (function verificarAutenticacao() {
         const urlParams = new URLSearchParams(window.location.search);
         const socialId = urlParams.get('id');
         const socialNome = urlParams.get('nome');
         const isSocial = urlParams.get('social');
 
-        // Se veio do login do Google, intercepta os dados e salva localmente antes da trava rodar
         if (isSocial === "true" && socialId && socialNome) {
             const usuarioSocial = { id: parseInt(socialId), nome: decodeURIComponent(socialNome) };
             localStorage.setItem('usuario_estudo', JSON.stringify(usuarioSocial));
-            
-            // Limpa os parâmetros da URL para o link ficar bonito novamente
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        // Trava de segurança padrão
-        const dadosUsuario = JSON.parse(localStorage.getItem('usuario_estudo'));
+        const dadosUsuario = localStorage.getItem('usuario_estudo');
         if (!dadosUsuario) { 
             window.location.href = 'login.html'; 
+        } else {
+            usuario = JSON.parse(dadosUsuario);
         }
     })();
 
-    // --- SEGURANÇA E SESSÃO ---
-    const dadosUsuario = localStorage.getItem('usuario_estudo');
-    if (!dadosUsuario) { window.location.href = 'login.html'; }
-    const usuario = JSON.parse(dadosUsuario);
-    
-    // Atualiza nome na interface
-    document.getElementById('nome-perfil-top').innerText = `Olá, ${usuario.nome}! 👋`;
+    // Inicialização unificada ao carregar a DOM
+    document.addEventListener("DOMContentLoaded", () => {
+        if (!usuario) return;
+        document.getElementById('nome-perfil-top').innerText = `Olá, ${usuario.nome}! 👋`;
+        
+        checarStatusDoSistema();
+        carregarInsightsDoEstudante();
+        carregarResultadosLocais();
+        carregarDadosMilitares();
+    });
+
+    // --- CONTROLE DE MIRARES / PROGRESSÃO DE PATENTES ---
+    function obterTetoXpProximaPatente(xpAtual) {
+        const faixas = [500, 1500, 3000, 5000, 8000, 12000, 18000, 25000, 35000, 50000, 75000, 110000, 160000, 220000, 300000, 400000, 500000];
+        for (let teto of faixas) {
+            if (xpAtual < teto) return teto;
+        }
+        return xpAtual; // Se for General Supremo
+    }
+
+    async function carregarDadosMilitares() {
+        try {
+            const rPerformance = await fetch(`${CONFIG.URL_BACKEND}/api/desempenho?usuario_id=${usuario.id}`);
+            const dadosPerf = await rPerformance.json();
+            
+            const rRanking = await fetch(`${CONFIG.URL_BACKEND}/api/ranking`);
+            const dadosRanking = await rRanking.json();
+
+            if (rRanking.ok) {
+                renderizarRanking(dadosRanking, usuario.nome);
+            }
+            
+            const xpAtual = dadosPerf.media_simulado ? (dadosPerf.xp || 0) : (dadosPerf.xp || 0); 
+            const patenteAtual = dadosPerf.patente || "Recruta";
+            const streakAtual = dadosPerf.streak_atual || 0;
+            
+            document.getElementById('militar-nome').innerText = usuario.nome;
+            document.getElementById('militar-patente').innerText = patenteAtual;
+            document.getElementById('militar-streak').innerText = streakAtual;
+            
+            const proximoTeto = obterTetoXpProximaPatente(xpAtual);
+            document.getElementById('xp-num').innerText = `${xpAtual} / ${proximoTeto} XP`;
+            
+            const percentualBarra = proximoTeto === xpAtual ? 100 : Math.min((xpAtual / proximoTeto) * 100, 100);
+            document.getElementById('xp-bar').style.width = `${percentualBarra}%`;
+
+            // Renderização das medalhas reais salvas no banco
+            const boxMedalhas = document.getElementById('militar-medalhas');
+            if (dadosPerf.historico_redacoes && dadosPerf.historico_redacoes.some(r => r.nota >= 900)) {
+                boxMedalhas.innerHTML = `<span class="medal-item">🥇 Escritor de Ouro</span>`;
+            } else {
+                boxMedalhas.innerHTML = `<span style="color: var(--text-muted); font-size: 14px;">Realize atividades para desbloquear insígnias.</span>`;
+            }
+
+        } catch (erro) {
+            console.error("Erro ao sincronizar dados do Estado-Maior:", erro);
+        }
+    }
+
+    function renderizarRanking(lista, nomeUsuarioLogado) {
+        const corpo = document.getElementById('ranking-corpo');
+        corpo.innerHTML = "";
+
+        if (!Array.isArray(lista) || lista.length === 0) {
+            corpo.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Nenhum soldado listado.</td></tr>`;
+            return;
+        }
+
+        lista.forEach((player, index) => {
+            const tr = document.createElement('tr');
+            if (player.nome === nomeUsuarioLogado) {
+                tr.className = "ranking-row-top";
+            }
+
+            const medalhaPosicao = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}º`;
+            tr.innerHTML = `
+                <td>${medalhaPosicao}</td>
+                <td>${player.nome} ${player.streak > 0 ? '🔥' : ''}</td>
+                <td><span class="rank-badge" style="font-size:11px; padding:2px 6px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;">${player.patente}</span></td>
+                <td style="font-weight:600; color:var(--primary);">${player.xp}</td>
+            `;
+            corpo.appendChild(tr);
+        });
+    }
+
+    function exibirResultadoMilitar(respostaServidor) {
+        if (respostaServidor.promocao) {
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            alert(`🎖️ PARABÉNS, GUERREIRO! Você foi promovido a: ${respostaServidor.nova_patente}!`);
+            carregarDadosMilitares();
+        } else {
+            alert(`+${respostaServidor.xp_ganho} XP adquiridos. ${respostaServidor.feedback_ia}`);
+        }
+    }
 
     // --- LOGICA DE ATUALIZAÇÃO DO BANCO (2 DIAS) ---
     async function checarStatusDoSistema() {
@@ -448,11 +682,7 @@
 
         try {
             const resposta = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/status`);
-            
-            if (!resposta.ok) {
-                throw new Error(`Erro no servidor: Status ${resposta.status}`);
-            }
-
+            if (!resposta.ok) throw new Error();
             const dados = await resposta.json();
             
             if (dados.status === 'desatualizado') {
@@ -467,7 +697,6 @@
                 botao.innerText = "🚀 Banco Atualizado";
             }
         } catch (erro) {
-            console.error("❌ Falha ao checar status:", erro);
             texto.innerText = "❌ Erro ao verificar sincronismo do banco.";
         }
     }
@@ -477,23 +706,20 @@
         const texto = document.getElementById('texto-status');
         
         botao.disabled = true;
-        botao.innerText = "⚡ Sincronizando com a IA...";
+        botao.innerText = "⚡ Sincronizando...";
         texto.innerText = "Aguarde, injetando pacotes inéditos de dados no Render...";
 
         try {
             const r = await fetch(`${CONFIG.URL_BACKEND}/api/sistema/atualizar`, { method: 'POST' });
-            const dados = await r.json();
-
             if (r.ok) {
                 alert("🎉 Banco de dados na nuvem alimentado com sucesso com questões da IA!");
                 window.location.reload();
             } else {
-                alert(`Falha no sincronismo secundário: ${dados.detalhe_real_do_erro || 'Erro interno'}`);
+                alert("Falha no sincronismo secundário.");
                 botao.disabled = false;
                 botao.innerText = "🔄 Tentar Novamente";
             }
         } catch (e) {
-            console.error("Erro crítico de rede:", e);
             alert("Erro crítico ao acionar ecossistema de rede.");
             botao.disabled = false;
             botao.innerText = "🔄 Tentar Novamente";
@@ -512,12 +738,7 @@
         }
     }
 
-    function fazerLogout() {
-        localStorage.removeItem('usuario_estudo');
-        window.location.href = 'login.html';
-    }
-
-    // --- CARREGAMENTO DO HISTÓRICO DE NOTAS DA NUVEM ---
+    // --- CARREGAMENTO DO HISTÓRICO DE NOTAS ---
     async function carregarResultadosLocais() {
         const container = document.getElementById('lista-resultados-locais');
         try {
@@ -540,11 +761,9 @@
                     <div class="resultado-item">
                         <span class="materia-nome">${item.materia}</span>
                         <span class="nota-badge">${item.nota}%</span>
-                    </div>
-                `;
+                    </div>`;
             });
         } catch (e) {
-            console.error("Erro ao puxar histórico do Render:", e);
             container.innerHTML = `
                 <div class="resultado-item">
                     <span class="materia-nome" style="color: var(--danger);">Erro de conexão</span>
@@ -553,10 +772,10 @@
         }
     }
 
-    // Inicialização automática das rotas integradas
-    checarStatusDoSistema();
-    carregarInsightsDoEstudante();
-    carregarResultadosLocais();
+    function fazerLogout() {
+        localStorage.removeItem('usuario_estudo');
+        window.location.href = 'login.html';
+    }
 </script>
 </body>
 </html>
