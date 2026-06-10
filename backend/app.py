@@ -592,9 +592,15 @@ def corrigir_redacao():
 
         dados_correcao = json.loads(resposta_ia)
 
+        # ... (código anterior da rota /api/redacao que extrai dados_correcao da IA)
+
+        nota_final = int(dados_correcao.get("nota", 700))
+        feedback_ia = dados_correcao.get("feedback", "")
+
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # Garante a existência da tabela de redações
         cur.execute("""
             CREATE TABLE IF NOT EXISTS redacoes (
                 id SERIAL PRIMARY KEY,
@@ -608,19 +614,62 @@ def corrigir_redacao():
         """)
         conn.commit()
 
+        # 🌟 LOGICA MILITAR DE REDAÇÃO INCORPORADA
+        # Verifica quantas redações aprovadas (nota >= 400) o aluno mandou nos últimos 7 dias
+        cur.execute("""
+            SELECT COUNT(*) FROM redacoes 
+            WHERE usuario_id = %s AND nota_final >= 400 AND data_envio >= CURRENT_DATE - INTERVAL '7 days';
+        """, (usuario_id,))
+        redacoes_na_semana = cur.fetchone()[0]
+
+        # Calcula o XP e as medalhas da redação usando o motor gamificacao.py
+        xp_ganho, medalhas = processar_xp_redacao(nota_final, redacoes_na_semana + 1)
+
+        # Insere a redação atual no histórico
         cur.execute(
             "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-            (usuario_id, tema, texto_aluno, int(dados_correcao.get("nota", 700)), dados_correcao.get("feedback", ""))
+            (usuario_id, tema, texto_aluno, nota_final, feedback_ia)
         )
+
+        # Atualiza o perfil do soldado caso ele tenha pontuado
+        promocao = False
+        nova_patente = "Recruta"
+        if xp_ganho > 0:
+            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp;", (xp_ganho, usuario_id))
+            novo_xp = cur.fetchone()[0]
+            
+            nova_patente = calcular_patente(novo_xp)
+            cur.execute("SELECT patente FROM usuarios WHERE id = %s;", (usuario_id,))
+            patente_antiga = cur.fetchone()[0]
+            
+            if nova_patente != patente_antiga:
+                cur.execute("UPDATE usuarios SET patente = %s WHERE id = %s;", (nova_patente, usuario_id))
+                promocao = True
+
+            # Grava as insígnias desbloqueadas (ex: Escritor de Ouro)
+            for medalha in medalhas:
+                cur.execute("""
+                    INSERT INTO conquistas_usuario (usuario_id, titulo_conquista) 
+                    VALUES (%s, %s) ON CONFLICT DO NOTHING;
+                """, (usuario_id, medalha))
+
+        # Atualiza a sequência diária (Streak) por atividade cumprida
+        cur.execute("UPDATE usuarios SET streak_atual = streak_atual + 1, ultima_atividade = CURRENT_DATE WHERE id = %s;", (usuario_id,))
+        
         conn.commit()
         cur.close()
         conn.close()
 
+        # Retorna os dados completos de XP para o Frontend festejar
         return jsonify({
             "status": "sucesso",
-            "nota": dados_correcao.get("nota", 700),
-            "feedback": dados_correcao.get("feedback", ""),
-            "modelo_nota_1000": dados_correcao.get("modelo_nota_1000", "<h3>🏗️ Modelo</h3><p>Não gerado.</p>")
+            "nota": nota_final,
+            "feedback": feedback_ia,
+            "modelo_nota_1000": dados_correcao.get("modelo_nota_1000", "<h3>🏗️ Modelo</h3><p>Não gerado.</p>"),
+            "xp_ganho": xp_ganho,
+            "promocao": promocao,
+            "nova_patente": nova_patente,
+            "feedback_militar": obter_feedback_militar(nota_final, "redacao")
         }), 200
 
     except Exception as e:

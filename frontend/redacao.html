@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudo Intensivo - Redação</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <script src="config.js"></script>
     <style>
         :root {
@@ -188,6 +189,8 @@
     <div id="bloco-resultado-ia" style="display: none; margin-top: 15px; flex-direction: column; gap: 20px;"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <script>
     const dadosUsuario = localStorage.getItem('usuario_estudo');
     if (!dadosUsuario) { window.location.href = 'login.html'; }
@@ -295,6 +298,10 @@
                         Retornar ao Dashboard Central →
                     </button>
                 `;
+
+                // ⚡ DISPARADOR DO MOTOR DE RECOMPENSAS MILITARES
+                processarRespostaRedacaoMilitar(res);
+
             } else {
                 alert("Erro reportado: " + res.mensagem);
                 botao.disabled = false;
@@ -305,6 +312,27 @@
             alert("Erro crítico de comunicação.");
             botao.disabled = false;
             botao.innerText = "🚀 Enviar para Correção IA";
+        }
+    }
+
+    // --- ANIMAÇÃO VISUAL MILITAR DE CONQUISTAS ---
+    function processarRespostaRedacaoMilitar(dadosServidor) {
+        if (dadosServidor.xp_ganho > 0) {
+            if (dadosServidor.promocao) {
+                // Chuva massiva de confetes por promoção de patente
+                confetti({ particleCount: 220, spread: 100, origin: { y: 0.6 } });
+                alert(`🎖️ PROMOÇÃO DE CARREIRA! O Estado-Maior promoveu você ao posto de: ${dadosServidor.nova_patente}!`);
+            } else if (dadosServidor.nota >= 900) {
+                // Efeito dourado premium para medalha Escritor de Ouro (Nota 900+)
+                confetti({ particleCount: 120, colors: ['#bb9b49', '#ffffff', '#e2c275'], spread: 70 });
+                alert(`🥇 EXCELENTE DESEMPENHO, GUERREIRO!\nSua nota foi de ${dadosServidor.nota} pontos. Você desbloqueou a insígnia de elite **Escritor de Ouro** e faturou +${dadosServidor.xp_ganho} XP!`);
+            } else {
+                // Explosão comum de ganho de pontos para notas normais
+                confetti({ particleCount: 60, spread: 60 });
+                alert(`🎯 Redação Avaliada! +${dadosServidor.xp_ganho} XP adicionados à sua ficha.\n\nFeedback da Inteligência Adaptativa: "${dadosServidor.feedback_militar}"`);
+            }
+        } else {
+            alert(`📋 Avaliação concluída. Nota: ${dadosServidor.nota}.\n\nIA Militar: "Rendimento abaixo do esperado. Foque na correção das competências gramaticais, recruta! Recuar nunca."`);
         }
     }
 
