@@ -555,6 +555,8 @@
 
     </main>
 
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <script>
     // --- SEGURANÇA E SESSÃO ---
     let usuario = null;
@@ -590,20 +592,35 @@
         carregarDadosMilitares();
     });
 
-    // --- CONTROLE DE MIRARES / PROGRESSÃO DE PATENTES ---
-    function obterTetoXpProximaPatente(xpAtual) {
-        const faixas = [500, 1500, 3000, 5000, 8000, 12000, 18000, 25000, 35000, 50000, 75000, 110000, 160000, 220000, 300000, 400000, 500000];
-        for (let teto of faixas) {
-            if (xpAtual < teto) return teto;
-        }
-        return xpAtual; // Se for General Supremo
-    }
+    // --- CONTROLE DE PATENTES / PROGRESSÃO DE XP RELATIVA ---
+    const LIMITES_PATENTES = [
+        { nome: "Recruta", min: 0, max: 500 },
+        { nome: "Soldado", min: 500, max: 1500 },
+        { nome: "Cabo", min: 1500, max: 3000 },
+        { nome: "3º Sargento", min: 3000, max: 5000 },
+        { nome: "2º Sargento", min: 5000, max: 8000 },
+        { nome: "1º Sargento", min: 8000, max: 12000 },
+        { nome: "Subtenente", min: 12000, max: 18000 },
+        { nome: "Aspirante", min: 18000, max: 25000 },
+        { nome: "2º Tenente", min: 25000, max: 35000 },
+        { nome: "1º Tenente", min: 35000, max: 50000 },
+        { nome: "Capitão", min: 50000, max: 75000 },
+        { nome: "Major", min: 75000, max: 110000 },
+        { nome: "Tenente-Coronel", min: 110000, max: 160000 },
+        { nome: "Coronel", min: 160000, max: 220000 },
+        { nome: "General de Brigada", min: 220000, max: 300000 },
+        { nome: "General de Divisão", min: 300000, max: 400000 },
+        { nome: "General de Exército", min: 400000, max: 500000 },
+        { nome: "General Supremo", min: 500000, max: 9999999 }
+    ];
 
     async function carregarDadosMilitares() {
         try {
+            // 1. Busca os dados de XP e Patente atualizados do banco
             const rPerformance = await fetch(`${CONFIG.URL_BACKEND}/api/desempenho?usuario_id=${usuario.id}`);
             const dadosPerf = await rPerformance.json();
             
+            // 2. Busca o Ranking do Estado-Maior
             const rRanking = await fetch(`${CONFIG.URL_BACKEND}/api/ranking`);
             const dadosRanking = await rRanking.json();
 
@@ -611,7 +628,8 @@
                 renderizarRanking(dadosRanking, usuario.nome);
             }
             
-            const xpAtual = dadosPerf.media_simulado ? (dadosPerf.xp || 0) : (dadosPerf.xp || 0); 
+            // Correção cirúrgica de atribuição direta do JSON higienizado
+            const xpAtual = dadosPerf.xp || 0; 
             const patenteAtual = dadosPerf.patente || "Recruta";
             const streakAtual = dadosPerf.streak_atual || 0;
             
@@ -619,16 +637,33 @@
             document.getElementById('militar-patente').innerText = patenteAtual;
             document.getElementById('militar-streak').innerText = streakAtual;
             
-            const proximoTeto = obterTetoXpProximaPatente(xpAtual);
-            document.getElementById('xp-num').innerText = `${xpAtual} / ${proximoTeto} XP`;
+            // Encontra a faixa correspondente para renderizar a barra fracionada
+            const faixa = LIMITES_PATENTES.find(p => p.nome === patenteAtual) || { min: 0, max: 500 };
+            document.getElementById('xp-num').innerText = `${xpAtual} / ${faixa.max} XP`;
             
-            const percentualBarra = proximoTeto === xpAtual ? 100 : Math.min((xpAtual / proximoTeto) * 100, 100);
+            let percentualBarra = 0;
+            if (faixa.max === faixa.min) {
+                percentualBarra = 100;
+            } else {
+                percentualBarra = ((xpAtual - faixa.min) / (faixa.max - faixa.min)) * 100;
+            }
+            
+            percentualBarra = Math.max(0, Math.min(percentualBarra, 100));
             document.getElementById('xp-bar').style.width = `${percentualBarra}%`;
 
             // Renderização das medalhas reais salvas no banco
             const boxMedalhas = document.getElementById('militar-medalhas');
+            let medalhasHTML = "";
+            
             if (dadosPerf.historico_redacoes && dadosPerf.historico_redacoes.some(r => r.nota >= 900)) {
-                boxMedalhas.innerHTML = `<span class="medal-item">🥇 Escritor de Ouro</span>`;
+                medalhasHTML += `<span class="medal-item">🥇 Escritor de Ouro</span>`;
+            }
+            if (dadosPerf.media_simulado === 100) {
+                medalhasHTML += `<span class="medal-item">🎯 Atirador de Elite</span>`;
+            }
+
+            if (medalhasHTML !== "") {
+                boxMedalhas.innerHTML = medalhasHTML;
             } else {
                 boxMedalhas.innerHTML = `<span style="color: var(--text-muted); font-size: 14px;">Realize atividades para desbloquear insígnias.</span>`;
             }

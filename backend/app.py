@@ -391,9 +391,8 @@ def obter_historico_simulados():
 
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
-    """Busca métricas históricas filtrando pelo ID dinâmico do usuário logado"""
+    """Busca métricas históricas de redação e dados reais do perfil militar do soldado"""
     usuario_id = request.args.get('usuario_id')
-    
     if not usuario_id:
         return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
         
@@ -401,29 +400,41 @@ def obter_desempenho():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # Busca as redações do usuário
         cur.execute("SELECT tema, nota_final, texto, feedback_ia FROM redacoes WHERE usuario_id = %s ORDER BY data_envio DESC LIMIT 5;", (usuario_id,))
         redacoes_banco = cur.fetchall()
         
+        # Busca a média dos simulados
         cur.execute("SELECT AVG(nota) FROM simulados_realizados WHERE usuario_id = %s;", (usuario_id,))
         media_simulado = cur.fetchone()[0]
         media_simulado = int(media_simulado) if media_simulado else 0 
 
+        # 🌟 BUSCA REAL DO PROFILE MILITAR DO USUÁRIO
+        cur.execute("SELECT COALESCE(xp, 0), COALESCE(patente, 'Recruta'), COALESCE(streak_atual, 0) FROM usuarios WHERE id = %s;", (usuario_id,))
+        militar = cur.fetchone()
+
         cur.close()
         conn.close()
         
-        historico_redacoes = []
-        for r in redacoes_banco:
-            historico_redacoes.append({
-                "tema": r[0],
-                "nota": r[1],
-                "texto": r[2],
-                "feedback": r[3]
-            })
+        # Garante valores padrão caso o registro falte por algum motivo
+        xp_real = militar[0] if militar else 0
+        patente_real = militar[1] if militar else "Recruta"
+        streak_real = militar[2] if militar else 0
+
+        historico_redacoes = [{
+            "tema": r[0],
+            "nota": r[1],
+            "texto": r[2],
+            "feedback": r[3]
+        } for r in redacoes_banco]
             
         return jsonify({
             "status": "sucesso",
             "media_simulado": media_simulado,
-            "historico_redacoes": historico_redacoes
+            "historico_redacoes": historico_redacoes,
+            "xp": xp_real,
+            "patente": patente_real,
+            "streak_atual": streak_real
         })
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
