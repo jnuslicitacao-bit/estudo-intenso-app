@@ -1,5 +1,6 @@
 import os
 import json
+import urllib.parse
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -8,6 +9,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+
 # Adicione esta importação no topo do app.py
 from gamificacao import calcular_patente, processar_xp_simulado, processar_xp_redacao, obter_feedback_militar
 
@@ -17,7 +19,6 @@ if not os.environ.get("RENDER"):
     load_dotenv()
 
 app = Flask(__name__)
-# É altamente recomendável ter uma secret key definida para sessões estáveis do OAuth
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 CORS(app)
 
@@ -44,10 +45,8 @@ def get_db_connection():
         database_url = "postgresql://administrador:L1fnSYJTUY8fxCNuHrWA7IiFieD814Wr@dpg-d8iprv6q1p3s73f0qk5g-a.ohio-postgres.render.com/estudo_intenso_db"
     
     if database_url and "localhost" not in database_url:
-        print("🚀 [DATABASE] Conectando ao Postgres do Render com Psycopg2...")
         return psycopg2.connect(database_url.strip())
     else:
-        print("💻 [DATABASE] Nenhuma URL de nuvem ativa. Conectando ao Postgres Local...")
         return psycopg2.connect(
             user="administrador",
             password="nova_senha123",
@@ -144,40 +143,8 @@ def init_db():
     except Exception as e:
         print(f"❌ [DATABASE ERROR]: {str(e)}")
 
-def inicializar_banco():
-    """Garante as tabelas na nuvem com SQL correto para PostgreSQL"""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        # 1. Tabela de controle
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS controle_atualizacao (
-                id SERIAL PRIMARY KEY,
-                ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        
-        # 2. Tabela de simulados
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS simulados (
-                id SERIAL PRIMARY KEY,
-                usuario_id INT,
-                materia VARCHAR(100),
-                nota INT,
-                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("✅ [BANCO] Tabelas criadas/validadas com sucesso na Nuvem!")
-    except Exception as e:
-        print(f"❌ [ERRO CRÍTICO CRIAÇÃO TABELAS]: {str(e)}")
-
-# Executa a inicialização automática das tabelas essenciais
-inicializar_banco()
+# Executa fora do bloco __main__ para garantir a inicialização correta via WSGI/Gunicorn no Render
+init_db()
 
 
 # ==========================================
@@ -186,18 +153,14 @@ inicializar_banco()
 
 @app.route('/api/cadastro', methods=['POST'])
 def cadastrar_usuario():
-    """Garante a criação da tabela de usuários no banco de dados e registra uma nova conta"""
     try:
         dados = request.get_json()
         if not dados:
-            print("❌ ERRO NO CADASTRO: Nenhum dado JSON foi recebido.")
             return jsonify({"status": "erro", "mensagem": "Requisição inválida. Envie dados em formato JSON."}), 400
             
         nome = dados.get('nome')
         email = dados.get('email')
         senha = dados.get('senha')
-
-        print(f"📥 Tentativa de cadastro recebida - Nome: {nome}, Email: {email}, Tem Senha: {bool(senha)}")
 
         if not nome or not email or not senha:
             return jsonify({"status": "erro", "mensagem": "Por favor, preencha todos os campos obrigatórios."}), 400
@@ -205,46 +168,28 @@ def cadastrar_usuario():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # 1. Garante que a tabela exista com a estrutura esperada
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                email VARCHAR(100) NOT NULL UNIQUE,
-                senha VARCHAR(255) NOT NULL,
-                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-
-        # 2. Verifica se o e-mail já não está cadastrado na nuvem
         cur.execute("SELECT id FROM usuarios WHERE email = %s;", (email,))
         if cur.fetchone():
             cur.close()
             conn.close()
             return jsonify({"status": "erro", "mensagem": "Este e-mail já está sendo utilizado por outro estudante."}), 400
 
-        # 3. Cria o hash de segurança para a senha e insere no banco
         senha_criptografada = generate_password_hash(senha)
         cur.execute(
             "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s);",
             (nome, email, senha_criptografada)
         )
         conn.commit()
-        
         cur.close()
         conn.close()
-        print(f"🎉 Usuário {nome} cadastrado com sucesso na Nuvem!")
         return jsonify({"status": "sucesso", "mensagem": "Conta criada com sucesso!"}), 201
 
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO NO CADASTRO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": f"Erro interno no servidor: {str(e)}"}), 500
 
 
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
-    """Valida as credenciais do usuário comparando o e-mail e o hash da senha"""
     try:
         dados = request.get_json()
         email = dados.get('email')
@@ -255,29 +200,23 @@ def login_usuario():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        
         cur.execute("SELECT id, nome, senha FROM usuarios WHERE email = %s;", (email,))
         usuario_encontrado = cur.fetchone()
-        
         cur.close()
         conn.close()
 
-        if not usuario_encontrado:
+        if not usuario_encontrado or not check_password_hash(usuario_encontrado[2], senha):
             return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
 
-        if check_password_hash(usuario_encontrado[2], senha):
-            return jsonify({
-                "status": "sucesso",
-                "usuario": {
-                    "id": usuario_encontrado[0],
-                    "nome": usuario_encontrado[1]
-                }
-            }), 200
-        else:
-            return jsonify({"status": "erro", "mensagem": "E-mail ou senha incorretos."}), 401
+        return jsonify({
+            "status": "sucesso",
+            "usuario": {
+                "id": usuario_encontrado[0],
+                "nome": usuario_encontrado[1]
+            }
+        }), 200
 
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO NO LOGIN: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
@@ -287,9 +226,7 @@ def login_usuario():
 
 @app.route('/api/questoes', methods=['GET'])
 def obter_questoes():
-    """Busca questões no banco de dados, permitindo filtrar por matéria de forma opcional"""
     materia_filtrada = request.args.get('materia') 
-    
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -306,27 +243,24 @@ def obter_questoes():
         cur.close()
         conn.close()
         
-        lista_questoes = []
-        for q in questoes:
-            lista_questoes.append({
-                "id": q[0], 
-                "materia": q[1], 
-                "enunciado": q[2],
-                "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
-            })
+        lista_questoes = [{
+            "id": q[0], 
+            "materia": q[1], 
+            "enunciado": q[2],
+            "opcoes": {"A": q[3], "B": q[4], "C": q[5], "D": q[6], "E": q[7]}
+        } for q in questoes]
         return jsonify(lista_questoes), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
-# Modifique a rota /api/simulado/salvar existente para injetar o XP automaticamente:
 @app.route('/api/simulado/salvar', methods=['POST'])
 def salvar_simulado():
     try:
         dados = request.get_json()
         usuario_id = dados.get('usuario_id')
         materia = dados.get('materia', 'Geral')
-        nota = dados.get('nota', 0) # Entra como percentual (0 a 100)
+        nota = dados.get('nota', 0)
         tempo_rapido = dados.get('completou_rapido', False)
 
         if not usuario_id:
@@ -335,39 +269,31 @@ def salvar_simulado():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Verifica se é o primeiro simulado do dia para aplicar o bônus
         cur.execute("SELECT COUNT(*) FROM simulados_realizados WHERE usuario_id = %s AND data_realizacao::DATE = CURRENT_DATE;", (usuario_id,))
         primeiro_do_dia = cur.fetchone()[0] == 0
 
-        # Calcula o XP ganho pelas regras militares
         xp_ganho, medalhas = processar_xp_simulado(nota, tempo_rapido, primeiro_do_dia)
 
-        # Salva o simulado no histórico
         cur.execute(
             "INSERT INTO simulados_realizados (usuario_id, materia, nota) VALUES (%s, %s, %s);",
             (usuario_id, materia, nota)
         )
 
-        # Atualiza o XP e Patente do Usuário se ele ganhou pontos
         promocao = False
         nova_patente = "Recruta"
         if xp_ganho > 0:
-            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp;", (xp_ganho, usuario_id))
-            novo_xp = cur.fetchone()[0]
+            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp, patente;", (xp_ganho, usuario_id))
+            usuario_atualizado = cur.fetchone()
+            novo_xp, patente_antiga = usuario_atualizado[0], usuario_atualizado[1]
             
             nova_patente = calcular_patente(novo_xp)
-            cur.execute("SELECT patente FROM usuarios WHERE id = %s;", (usuario_id,))
-            patente_antiga = cur.fetchone()[0]
-            
             if nova_patente != patente_antiga:
                 cur.execute("UPDATE usuarios SET patente = %s WHERE id = %s;", (nova_patente, usuario_id))
                 promocao = True
 
-            # Insere as medalhas conquistadas, se houver
             for medalha in medalhas:
                 cur.execute("INSERT INTO conquistas_usuario (usuario_id, titulo_conquista) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (usuario_id, medalha))
 
-        # Atualiza o Streak (Amanhã faremos a rota completa de controle diário)
         cur.execute("UPDATE usuarios SET streak_atual = streak_atual + 1, ultima_atividade = CURRENT_DATE WHERE id = %s;", (usuario_id,))
         
         conn.commit()
@@ -387,7 +313,6 @@ def salvar_simulado():
 
 @app.route('/api/simulados/historico', methods=['GET'])
 def obter_historico_simulados():
-    """Busca os últimos desempenhos salvos na nuvem para o usuário especificado"""
     try:
         usuario_id = request.args.get('usuario_id')
         if not usuario_id:
@@ -395,18 +320,6 @@ def obter_historico_simulados():
 
         conn = get_db_connection()
         cur = conn.cursor()
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS simulados_realizados (
-                id SERIAL PRIMARY KEY,
-                usuario_id INTEGER NOT NULL,
-                materia VARCHAR(100) NOT NULL,
-                nota INTEGER NOT NULL,
-                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-
         cur.execute("""
             SELECT materia, nota 
             FROM simulados_realizados 
@@ -419,23 +332,14 @@ def obter_historico_simulados():
         cur.close()
         conn.close()
 
-        historico = []
-        for r in resultados:
-            historico.append({
-                "materia": r[0],
-                "nota": r[1]
-            })
-
+        historico = [{"materia": r[0], "nota": r[1]} for r in resultados]
         return jsonify(historico), 200
-
     except Exception as e:
-        print(f"❌ ERRO AO BUSCAR HISTÓRICO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
 @app.route('/api/desempenho', methods=['GET'])
 def obter_desempenho():
-    """Busca métricas históricas de redação e dados reais do perfil militar do soldado"""
     usuario_id = request.args.get('usuario_id')
     if not usuario_id:
         return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
@@ -444,23 +348,19 @@ def obter_desempenho():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Busca as redações do usuário
         cur.execute("SELECT tema, nota_final, texto, feedback_ia FROM redacoes WHERE usuario_id = %s ORDER BY data_envio DESC LIMIT 5;", (usuario_id,))
         redacoes_banco = cur.fetchall()
         
-        # Busca a média dos simulados
         cur.execute("SELECT AVG(nota) FROM simulados_realizados WHERE usuario_id = %s;", (usuario_id,))
-        media_simulado = cur.fetchone()[0]
-        media_simulado = int(media_simulado) if media_simulado else 0 
+        resultado_media = cur.fetchone()[0]
+        media_simulado = int(resultado_media) if resultado_media is not None else 0 
 
-        # 🌟 BUSCA REAL DO PROFILE MILITAR DO USUÁRIO
         cur.execute("SELECT COALESCE(xp, 0), COALESCE(patente, 'Recruta'), COALESCE(streak_atual, 0) FROM usuarios WHERE id = %s;", (usuario_id,))
         militar = cur.fetchone()
 
         cur.close()
         conn.close()
         
-        # Garante valores padrão caso o registro falte por algum motivo
         xp_real = militar[0] if militar else 0
         patente_real = militar[1] if militar else "Recruta"
         streak_real = militar[2] if militar else 0
@@ -479,14 +379,13 @@ def obter_desempenho():
             "xp": xp_real,
             "patente": patente_real,
             "streak_atual": streak_real
-        })
+        }), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
     
 @app.route('/api/temas', methods=['GET'])
 def obter_temas_redacao():
-    """Busca os temas de redação direto no banco de dados de forma simplificada e dinâmica"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -500,7 +399,6 @@ def obter_temas_redacao():
         """)
         conn.commit()
 
-        # ✅ ALINHAMENTO CIRÚRGICO DA VALIDAÇÃO E INSERÇÃO DOS NOVOS TEMAS
         cur.execute("SELECT COUNT(*) FROM temas_redacao;")
         if cur.fetchone()[0] < 5:
             cur.execute("""
@@ -516,31 +414,22 @@ def obter_temas_redacao():
             
         cur.execute("SELECT id, titulo, textos_motivadores FROM temas_redacao;")
         temas_banco = cur.fetchall()
-
         cur.close()
         conn.close()
         
-        lista_temas = []
-        for t in temas_banco:
-            titulo_limpo = t[1].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[1], str) else t[1]
-            textos_limpos = t[2].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[2], str) else t[2]
-            
-            lista_temas.append({
-                "id": t[0],
-                "titulo": titulo_limpo,
-                "textos_motivadores": textos_limpos
-            })
+        lista_temas = [{
+            "id": t[0],
+            "titulo": t[1].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[1], str) else t[1],
+            "textos_motivadores": t[2].encode('utf-8', errors='ignore').decode('utf-8') if isinstance(t[2], str) else t[2]
+        } for t in temas_banco]
             
         return jsonify(lista_temas), 200
-
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO NA ROTA DE TEMAS: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
 @app.route('/api/questoes/ia', methods=['POST'])
 def obter_questoes_ia():
-    """Gera questões inéditas E o conteúdo do edital baseado na banca informada"""
     dados = request.get_json()
     pesquisa_banca = dados.get('banca')
 
@@ -584,16 +473,13 @@ def obter_questoes_ia():
         )
         
         texto_resposta = resposta.choices[0].message.content.strip()
-        dados_gerados = json.loads(texto_resposta)
-        return jsonify(dados_gerados), 200
-        
+        return jsonify(json.loads(texto_resposta)), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": f"Erro ao gerar conteúdo e simulado por IA: {str(e)}"}), 500
 
 
 @app.route('/api/redacao', methods=['POST'])
 def corrigir_redacao():
-    """Corrige a redação E gera um modelo de estrutura Nota 1000 focado no tema"""
     dados = request.get_json()
     if not dados:
         return jsonify({"status": "erro", "mensagem": "Dados não recebidos."}), 400
@@ -634,9 +520,7 @@ def corrigir_redacao():
         )
         
         resposta_ia = resposta.choices[0].message.content.strip()
-        print(f"DEBUG - Resposta Bruta da IA: {resposta_ia}")
 
-        # 🛡️ FILTRO EXTRATOR AVANÇADO: Encontra o JSON mesmo se a IA colocar lixo ao redor
         start_idx = resposta_ia.find('{')
         end_idx = resposta_ia.rfind('}') + 1
         
@@ -646,80 +530,45 @@ def corrigir_redacao():
             raise ValueError("A resposta da IA não contém um objeto JSON válido.")
 
         dados_correcao = json.loads(resposta_ia)
-
-        # ... (código anterior da rota /api/redacao que extrai dados_correcao da IA)
-
         nota_final = int(dados_correcao.get("nota", 700))
-        feedback_ia = dados_correcao.get("feedback", "")
 
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Garante a existência da tabela de redações
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS redacoes (
-                id SERIAL PRIMARY KEY,
-                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
-                tema TEXT NOT NULL,
-                texto TEXT NOT NULL,
-                nota_final INT NOT NULL,
-                feedback_ia TEXT NOT NULL,
-                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
 
-        # 🌟 LOGICA MILITAR DE REDAÇÃO INCORPORADA
-        # Verifica quantas redações aprovadas (nota >= 400) o aluno mandou nos últimos 7 dias
-        cur.execute("""
-            SELECT COUNT(*) FROM redacoes 
-            WHERE usuario_id = %s AND nota_final >= 400 AND data_envio >= CURRENT_DATE - INTERVAL '7 days';
-        """, (usuario_id,))
+        cur.execute("SELECT COUNT(*) FROM redacoes WHERE usuario_id = %s AND nota_final >= 400 AND data_envio >= CURRENT_DATE - INTERVAL '7 days';", (usuario_id,))
         redacoes_na_semana = cur.fetchone()[0]
-
-        # Calcula o XP e as medalhas da redação usando o motor gamificacao.py
+        
         xp_ganho, medalhas = processar_xp_redacao(nota_final, redacoes_na_semana + 1)
 
-        # Insere a redação atual no histórico
         cur.execute(
             "INSERT INTO redacoes (usuario_id, tema, texto, nota_final, feedback_ia) VALUES (%s, %s, %s, %s, %s);",
-            (usuario_id, tema, texto_aluno, nota_final, feedback_ia)
+            (usuario_id, tema, texto_aluno, nota_final, dados_correcao.get("feedback", ""))
         )
 
-        # Atualiza o perfil do soldado caso ele tenha pontuado
         promocao = False
         nova_patente = "Recruta"
         if xp_ganho > 0:
-            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp;", (xp_ganho, usuario_id))
-            novo_xp = cur.fetchone()[0]
+            cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp, patente;", (xp_ganho, usuario_id))
+            u_atualizado = cur.fetchone()
+            novo_xp, patente_antiga = u_atualizado[0], u_atualizado[1]
             
             nova_patente = calcular_patente(novo_xp)
-            cur.execute("SELECT patente FROM usuarios WHERE id = %s;", (usuario_id,))
-            patente_antiga = cur.fetchone()[0]
-            
             if nova_patente != patente_antiga:
                 cur.execute("UPDATE usuarios SET patente = %s WHERE id = %s;", (nova_patente, usuario_id))
                 promocao = True
-
-            # Grava as insígnias desbloqueadas (ex: Escritor de Ouro)
+                
             for medalha in medalhas:
-                cur.execute("""
-                    INSERT INTO conquistas_usuario (usuario_id, titulo_conquista) 
-                    VALUES (%s, %s) ON CONFLICT DO NOTHING;
-                """, (usuario_id, medalha))
+                cur.execute("INSERT INTO conquistas_usuario (usuario_id, titulo_conquista) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (usuario_id, medalha))
 
-        # Atualiza a sequência diária (Streak) por atividade cumprida
         cur.execute("UPDATE usuarios SET streak_atual = streak_atual + 1, ultima_atividade = CURRENT_DATE WHERE id = %s;", (usuario_id,))
-        
         conn.commit()
         cur.close()
         conn.close()
 
-        # Retorna os dados completos de XP para o Frontend festejar
         return jsonify({
             "status": "sucesso",
             "nota": nota_final,
-            "feedback": feedback_ia,
+            "feedback": dados_correcao.get("feedback", ""),
             "modelo_nota_1000": dados_correcao.get("modelo_nota_1000", "<h3>🏗️ Modelo</h3><p>Não gerado.</p>"),
             "xp_ganho": xp_ganho,
             "promocao": promocao,
@@ -728,22 +577,14 @@ def corrigir_redacao():
         }), 200
 
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO NA REDAÇÃO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": f"Falha no processamento: {str(e)}"}), 500
 
 
 @app.route('/api/sistema/status', methods=['GET'])
 def status_sistema():
-    """Verifica se o sistema precisa de atualização (expira em 2 dias)"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS controle_atualizacao (
-                id SERIAL PRIMARY KEY,
-                ultima_atualizacao TIMESTAMP NOT NULL
-            );
-        """)
         cur.execute("SELECT ultima_atualizacao FROM controle_atualizacao ORDER BY id DESC LIMIT 1;")
         resultado = cur.fetchone()
         
@@ -766,7 +607,6 @@ def status_sistema():
 
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
-    """IA generates new general mock test packages to feed the cloud database"""
     try:
         prompt = """
         Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
@@ -830,17 +670,13 @@ def atualizar_sistema():
         cur.close()
         conn.close()
         
-        print("🎉 Sincronização e carga de questões efetuadas com sucesso na Nuvem!")
         return jsonify({"status": "sucesso", "mensagem": "Banco de dados alimentado com sucesso!"}), 200
-
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO NA ATUALIZAÇÃO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 
 @app.route('/api/insights', methods=['GET'])
 def obter_insights():
-    """Analisa o desempenho do usuário e gera dicas inteligentes personalizadas"""
     usuario_id = request.args.get('usuario_id')
     if not usuario_id:
         return jsonify({"status": "erro", "mensagem": "ID em falta"}), 400
@@ -875,7 +711,6 @@ def obter_insights():
 
 @app.route('/api/gabarito/comentar', methods=['POST'])
 def comentar_questao_ia():
-    """Recebe uma questão e gera uma explicação pedagógica personalizada sobre o erro ou acerto"""
     dados = request.get_json()
     enunciado = dados.get('enunciado')
     opcoes = dados.get('opcoes')
@@ -894,7 +729,7 @@ def comentar_questao_ia():
     O aluno marcou a alternativa: {resposta_aluno}
     O gabarito correto é a alternativa: {resposta_correta}
     
-    Dê uma explicação cirúrgica, em no máximo 4 linhas, explicando por que a alternativa {resposta_correta} está correta e por que a resposta do aluno faz sentido ou onde ele se confundiu (caso ele tenha errado). Seja direto e use tom encorarador.
+    Dê uma explicação cirúrgica, em no máximo 4 linhas, explicando por que a alternativa {resposta_correta} está correta e por que a resposta do aluno faz sentido ou onde ele se confundiu (caso ele tenha errado). Seja direto e use tom encorajador.
     """
 
     try:
@@ -906,10 +741,7 @@ def comentar_questao_ia():
             ],
             temperature=0.5
         )
-        
-        comentario_ia = resposta.choices[0].message.content.strip()
-        return jsonify({"status": "sucesso", "comentario": comentario_ia}), 200
-
+        return jsonify({"status": "sucesso", "comentario": resposta.choices[0].message.content.strip()}), 200
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
@@ -920,18 +752,15 @@ def comentar_questao_ia():
 
 @app.route('/api/auth/google')
 def login_google():
-    """Redireciona o usuário para a tela de login do Google"""
     redirect_uri = request.args.get('redirect_uri')
     return google.authorize_redirect(redirect_uri)
 
 
 @app.route('/api/auth/callback')
 def auth_callback():
-    """Recebe a resposta de sucesso do Google, cria ou loga o usuário no Postgres"""
     try:
         token = google.authorize_access_token()
         user_info = token.get('userinfo')
-        
         if not user_info:
             return "Erro ao obter dados do perfil do Google", 400
             
@@ -941,19 +770,6 @@ def auth_callback():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Garante a existência da tabela de usuários antes da checagem
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                email VARCHAR(100) NOT NULL UNIQUE,
-                senha VARCHAR(255) NOT NULL,
-                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-        
-        # Verifica se o usuário já existe na sua tabela atual
         cur.execute("SELECT id, nome FROM usuarios WHERE email = %s;", (email,))
         usuario_existente = cur.fetchone()
         
@@ -961,7 +777,6 @@ def auth_callback():
             user_id = usuario_existente[0]
             user_nome = usuario_existente[1]
         else:
-            # Se for o primeiro acesso, registra ele automaticamente no banco com uma senha aleatória estável
             senha_aleatoria = generate_password_hash(os.urandom(24).hex())
             cur.execute(
                 "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s) RETURNING id;",
@@ -974,17 +789,7 @@ def auth_callback():
         cur.close()
         conn.close()
         
-        # Transmite os dados de login de volta para o seu Frontend via parâmetros na URL de sucesso
-        frontend_url = "http://127.0.0.1:5500/frontend/index.html" 
-        # Detecção dinâmica de URL
-        if os.environ.get("RENDER"):
-            frontend_url = "https://estudo-intenso.onrender.com/index.html"
-        else:
-            frontend_url = "http://127.0.0.1:5500/frontend/index.html"
-            
-        # 🌟 NOVA ESTRATÉGIA: Envia o ID e o Nome direto na URL de redirecionamento HTTP
-        # Isso impede que o navegador bloqueie a gravação por restrições de iframe/OAuth
-        import urllib.parse
+        frontend_url = "https://estudo-intenso.onrender.com/index.html" if os.environ.get("RENDER") else "http://127.0.0.1:5500/frontend/index.html"
         nome_codificado = urllib.parse.quote(user_nome)
         
         return f"""
@@ -996,9 +801,9 @@ def auth_callback():
         print(f"❌ ERRO NO CALLBACK DO GOOGLE: {str(e)}")
         return f"Falha na autenticação: {str(e)}", 500
 
+
 @app.route('/api/ranking', methods=['GET'])
 def obter_ranking():
-    """Retorna os melhores soldados posicionados por mérito de XP com fallbacks de segurança"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1021,8 +826,8 @@ def obter_ranking():
         } for u in usuarios_ranking]
         return jsonify(lista_ranking), 200
     except Exception as e:
-        print(f"❌ ERRO NA ROTA DE RANKING: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 
 @app.route('/')
 def home():
@@ -1030,8 +835,5 @@ def home():
 
 
 if __name__ == '__main__':
-    # Executa a migração das tabelas antes de ligar o servidor
-    init_db() 
-    
-    # Liga o aplicativo localmente
-    app.run(debug=True, port=5000)
+    porta = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=porta)
