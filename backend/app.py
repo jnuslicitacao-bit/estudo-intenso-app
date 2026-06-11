@@ -87,6 +87,20 @@ def init_db():
             except Exception:
                 conn.rollback()
 
+        # (Coloque este bloco logo após a criação da tabela conquistas_usuario)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS missoes_diarias (
+                id SERIAL PRIMARY KEY,
+                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+                descricao VARCHAR(255) NOT NULL,
+                xp_recompensa INT NOT NULL,
+                concluida BOOLEAN DEFAULT FALSE,
+                data_missao DATE DEFAULT CURRENT_DATE,
+                UNIQUE(usuario_id, descricao, data_missao)
+            );
+        """)
+        conn.commit()
+
         # 3. Garante a tabela de Simulados Realizados histórica
         cur.execute("""
             CREATE TABLE IF NOT EXISTS simulados_realizados (
@@ -833,6 +847,124 @@ def obter_ranking():
 def home():
     return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
 
+@app.route('/api/missoes', methods=['GET'])
+def obter_missoes_diarias():
+    """Busca ou gera as missões do dia para o soldado"""
+    usuario_id = request.args.get('usuario_id')
+    if not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
+        
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Verifica se o usuário já tem missões geradas para a data de hoje
+        cur.execute("""
+            SELECT id, descricao, xp_recompensa, concluida 
+            FROM missoes_diarias 
+            WHERE usuario_id = %s AND data_missao = CURRENT_DATE;
+        """, (usuario_id,))
+        missoes = cur.fetchall()
+        
+        # 2. Se não tiver, o Estado-Maior designa 3 missões aleatórias para o dia dele
+        if not missoes:
+            pool_missoes = [
+                ("Resolver 20 questões no simulado", 30),
+                ("Concluir 1 simulado adaptativo", 50),
+                ("Estudar por 1 hora no Modo Foco", 40),
+                ("Submeter 1 redação para correção da IA", 100),
+                ("Acertar mais de 70% em um caderno", 60)
+            ]
+            
+            # Escolhe 3 missões aleatórias sem repetir
+            import random
+            missoes_do_dia = random.sample(pool_missoes, 3)
+            
+            for desc, xp in missoes_do_dia:
+                try:
+                    cur.execute("""
+                        INSERT INTO missoes_diarias (usuario_id, descricao, xp_recompensa) 
+                        VALUES (%s, %s, %s);
+                    """, (usuario_id, desc, xp))
+                except Exception:
+                    conn.rollback()
+            conn.commit()
+            
+            # Recarrega para trazer com os IDs certos do banco
+            cur.execute("""
+                SELECT id, descricao, xp_recompensa, concluida 
+                FROM missoes_diarias 
+                WHERE usuario_id = %s AND data_missao = CURRENT_DATE;
+            """, (usuario_id,))
+            missoes = cur.fetchall()
+            
+        cur.close()
+        conn.close()
+        
+        lista_missoes = [{
+            "id": m[0],
+            "descricao": m[1],
+            "xp": m[2],
+            "concluida": m[3]
+        } for m in missoes]
+        
+        return jsonify(lista_missoes), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+
+@app.route('/api/missoes/concluir', methods=['POST'])
+def concluir_missao_diaria():
+    """Marca uma missão como cumprida e injeta o XP na ficha do usuário"""
+    dados = request.get_json()
+    missao_id = dados.get('missao_id')
+    usuario_id = dados.get('usuario_id')
+    
+    if not missao_id or not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Dados incompletos."}), 400
+        
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Verifica se a missão já não foi concluída antes para evitar trapaças
+        cur.execute("SELECT concluida, xp_recompensa, descricao FROM missoes_diarias WHERE id = %s AND usuario_id = %s;", (missao_id, usuario_id))
+        registro = cur.fetchone()
+        
+        if not registro or registro[0] == True:
+            cur.close()
+            conn.close()
+            return jsonify({"status": "erro", "mensagem": "Missão inválida ou já cumprida."}), 400
+            
+        xp_ganho = registro[1]
+        
+        # Atualiza o status da missão
+        cur.execute("UPDATE missoes_diarias SET concluida = TRUE WHERE id = %s;", (missao_id,))
+        
+        # Bonifica o soldado com o XP da missão
+        cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp, patente;", (xp_ganho, usuario_id))
+        usuario_atualizado = cur.fetchone()
+        novo_xp, patente_antiga = usuario_atualizado[0], usuario_atualizado[1]
+        
+        # Verifica promoção
+        nova_patente = calcular_patente(novo_xp)
+        promocao = False
+        if nova_patente != patente_antiga:
+            cur.execute("UPDATE usuarios SET patente = %s WHERE id = %s;", (nova_patente, usuario_id))
+            promocao = True
+            
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "status": "sucesso",
+            "xp_ganho": xp_ganho,
+            "promocao": promocao,
+            "nova_patente": nova_patente
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 if __name__ == '__main__':
     porta = int(os.environ.get("PORT", 5000))

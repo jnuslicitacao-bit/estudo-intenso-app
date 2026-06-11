@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudo Intensivo - Painel de Alta Performance</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link class="favicon" rel="icon" href="data:;base64,iVBORw0KGgo=">
     <script src="config.js"></script>
     <style>
         :root {
@@ -28,6 +28,74 @@
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
         }
+
+        /* 🎯 ESTILOS DO QUADRO DE MISSÕES DIÁRIAS */
+        .mission-box {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mission-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 14px 18px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .mission-item.done {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            opacity: 0.85;
+        }
+
+        .mission-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mission-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .mission-item.done .mission-title {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .mission-xp {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .mission-item.done .mission-xp {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .btn-claim {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-claim:hover { background: var(--primary-hover); }
 
         /* 🪖 ESTILOS DO SISTEMA MILITAR GAMIFICADO */
         .military-grid {
@@ -489,6 +557,11 @@
                     <div id="militar-medalhas" class="medal-box">
                         <span style="color: var(--text-muted); font-size: 14px;">Nenhuma medalha conquistada ainda.</span>
                     </div>
+
+                    <h3 style="margin-top: 25px; font-size: 16px; margin-bottom: 5px;">🎯 Diretrizes do Dia (Missões)</h3>
+                    <div id="quadro-missoes" class="mission-box">
+                        <div style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 10px;">Recebendo ordens do Estado-Maior...</div>
+                    </div>
                 </div>
 
                 <div class="military-card">
@@ -590,6 +663,7 @@
         carregarInsightsDoEstudante();
         carregarResultadosLocais();
         carregarDadosMilitares();
+        carregarMissoesDiarias();
     });
 
     // --- CONTROLE DE PATENTES / PROGRESSÃO DE XP RELATIVA ---
@@ -616,11 +690,9 @@
 
     async function carregarDadosMilitares() {
         try {
-            // 1. Busca os dados de XP e Patente atualizados do banco
             const rPerformance = await fetch(`${CONFIG.URL_BACKEND}/api/desempenho?usuario_id=${usuario.id}`);
             const dadosPerf = await rPerformance.json();
             
-            // 2. Busca o Ranking do Estado-Maior
             const rRanking = await fetch(`${CONFIG.URL_BACKEND}/api/ranking`);
             const dadosRanking = await rRanking.json();
 
@@ -628,7 +700,6 @@
                 renderizarRanking(dadosRanking, usuario.nome);
             }
             
-            // Correção cirúrgica de atribuição direta do JSON higienizado
             const xpAtual = dadosPerf.xp || 0; 
             const patenteAtual = dadosPerf.patente || "Recruta";
             const streakAtual = dadosPerf.streak_atual || 0;
@@ -637,7 +708,6 @@
             document.getElementById('militar-patente').innerText = patenteAtual;
             document.getElementById('militar-streak').innerText = streakAtual;
             
-            // Encontra a faixa correspondente para renderizar a barra fracionada
             const faixa = LIMITES_PATENTES.find(p => p.nome === patenteAtual) || { min: 0, max: 500 };
             document.getElementById('xp-num').innerText = `${xpAtual} / ${faixa.max} XP`;
             
@@ -651,7 +721,6 @@
             percentualBarra = Math.max(0, Math.min(percentualBarra, 100));
             document.getElementById('xp-bar').style.width = `${percentualBarra}%`;
 
-            // Renderização das medalhas reais salvas no banco
             const boxMedalhas = document.getElementById('militar-medalhas');
             let medalhasHTML = "";
             
@@ -670,6 +739,71 @@
 
         } catch (erro) {
             console.error("Erro ao sincronizar dados do Estado-Maior:", erro);
+        }
+    }
+
+    // --- LÓGICA DO QUADRO DE MISSÕES DIÁRIAS ---
+    async function carregarMissoesDiarias() {
+        try {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/missoes?usuario_id=${usuario.id}`);
+            if (!r.ok) throw new Error();
+            const missoes = await r.json();
+            
+            const container = document.getElementById('quadro-missoes');
+            container.innerHTML = "";
+            
+            if (missoes.length === 0) {
+                container.innerHTML = `<span style="color: var(--text-muted); font-size: 14px;">Nenhuma diretriz pendente para hoje.</span>`;
+                return;
+            }
+            
+            missoes.forEach(missao => {
+                const div = document.createElement('div');
+                div.className = `mission-item ${missao.concluida ? 'done' : ''}`;
+                
+                const acaoHTML = missao.concluida 
+                    ? `<span style="color: var(--success); font-weight:700; font-size:16px;">✓ Feito</span>`
+                    : `<button class="btn-claim" onclick="reivindicarMissao(${missao.id})">Concluir</button>`;
+                    
+                div.innerHTML = `
+                    <div class="mission-info">
+                        <span class="mission-xp">+${missao.xp} XP</span>
+                        <span class="mission-title">${missao.descricao}</span>
+                    </div>
+                    <div>${acaoHTML}</div>
+                `;
+                container.appendChild(div);
+            });
+        } catch (e) {
+            console.error("Erro ao puxar missões:", e);
+        }
+    }
+
+    async function reivindicarMissao(idMissao) {
+        try {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/missoes/concluir`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ missao_id: idMissao, usuario_id: usuario.id })
+            });
+            
+            const dados = await r.json();
+            if (r.ok && dados.status === "sucesso") {
+                if (dados.promocao) {
+                    confetti({ particleCount: 180, spread: 100, origin: { y: 0.6 } });
+                    alert(`🎖️ EXCELENTE TRABALHO, SOLDADO!\nMissão cumprida. Você acumulou +${dados.xp_ganho} XP e subiu para la patente de ${dados.nova_patente}!`);
+                } else {
+                    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+                    alert(`🎯 Diretriz cumprida! +${dados.xp_ganho} XP injetados na sua carreira.`);
+                }
+                
+                carregarDadosMilitares();
+                carregarMissoesDiarias();
+            } else {
+                alert("Erro ao validar missão: " + dados.mensagem);
+            }
+        } catch (e) {
+            alert("Erro de conexão ao processar mérito.");
         }
     }
 
@@ -697,16 +831,6 @@
             `;
             corpo.appendChild(tr);
         });
-    }
-
-    function exibirResultadoMilitar(respostaServidor) {
-        if (respostaServidor.promocao) {
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            alert(`🎖️ PARABÉNS, GUERREIRO! Você foi promovido a: ${respostaServidor.nova_patente}!`);
-            carregarDadosMilitares();
-        } else {
-            alert(`+${respostaServidor.xp_ganho} XP adquiridos. ${respostaServidor.feedback_ia}`);
-        }
     }
 
     // --- LOGICA DE ATUALIZAÇÃO DO BANCO (2 DIAS) ---
