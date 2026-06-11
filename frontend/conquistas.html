@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudo Intensivo - Galeria de Conquistas</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #eff6ff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --bg-global: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --gold: #d97706;
+            --gold-light: #fef3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            background-color: var(--bg-global);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .btn-voltar {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-voltar:hover { background-color: #f8fafc; color: var(--text-main); }
+
+        h2 { font-size: 26px; font-weight: 700; margin: 0 0 6px 0; }
+        .desc-top { color: var(--text-muted); font-size: 15px; margin: 0 0 35px 0; }
+
+        /* GRID DE TROFÉUS */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .achievement-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* Estado Bloqueado */
+        .achievement-card.locked {
+            opacity: 0.5;
+            background: #f8fafc;
+            filter: grayscale(100%);
+        }
+
+        /* Estado Desbloqueado */
+        .achievement-card.unlocked {
+            border-color: #fde68a;
+            background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+            box-shadow: 0 10px 15px -3px rgba(217, 119, 6, 0.05);
+        }
+
+        .medal-icon {
+            font-size: 44px;
+            margin-bottom: 15px;
+            background: #f1f5f9;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+        }
+
+        .achievement-card.unlocked .medal-icon {
+            background: var(--gold-light);
+            border-color: #fcd34d;
+            animation: pulse-gold 2s infinite alternate;
+        }
+
+        .medal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            color: var(--text-main);
+        }
+        .achievement-card.locked .medal-title { color: var(--text-muted); }
+
+        .medal-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 9999px;
+        }
+        .status-badge.unlocked-badge { background: #dcfce7; color: #15803d; }
+        .status-badge.locked-badge { background: #cbd5e1; color: #475569; }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(253, 211, 77, 0.4); }
+            100% { box-shadow: 0 0 0 10px rgba(253, 211, 77, 0.0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="btn-voltar">← Voltar ao Dashboard</a>
+    <h2>🎖️ Galeria de Condecorações Oficiais</h2>
+    <p class="desc-top">Consulte suas medalhas de mérito intelectual e brasões expedidos pelo Estado-Maior da plataforma.</p>
+
+    <div id="grid-conquistas" class="achievements-grid">
+        <div style="text-align: center; grid-column: span 3; color: var(--text-muted);">Acessando os arquivos do Exército...</div>
+    </div>
+</div>
+
+<script>
+    const dadosUsuario = localStorage.getItem('usuario_estudo');
+    if (!dadosUsuario) { window.location.href = 'login.html'; }
+    const usuario = JSON.parse(dadosUsuario);
+
+    async function carregarGaleriaConquistas() {
+        try {
+            const r = await fetch(`${CONFIG.URL_BACKEND}/api/conquistas?usuario_id=${usuario.id}`);
+            const conquistas = await r.json();
+
+            const grid = document.getElementById('grid-conquistas');
+            grid.innerHTML = "";
+
+            conquistas.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `achievement-card ${item.desbloqueada ? 'unlocked' : 'locked'}`;
+
+                const badge = item.desbloqueada 
+                    ? `<span class="status-badge unlocked-badge">Desbloqueado</span>`
+                    : `<span class="status-badge locked-badge">Bloqueado</span>`;
+
+                card.innerHTML = `
+                    ${badge}
+                    <div class="medal-icon">${item.desbloqueada ? item.icone : "🔒"}</div>
+                    <h4 class="medal-title">${item.titulo}</h4>
+                    <p class="medal-desc">${item.descricao}</p>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            document.getElementById('grid-conquistas').innerHTML = `<div style="color:var(--danger); text-align:center; grid-column:span 3;">Erro ao carregar a sala de troféus.</div>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", carregarGaleriaConquistas);
+</script>
+</body>
+</html>
