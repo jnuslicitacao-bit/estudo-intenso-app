@@ -57,20 +57,41 @@ def get_db_connection():
         )
 
 def init_db():
-    """Cria ou atualiza a estrutura do banco de dados para a gamificação militar"""
+    """Garante as colunas e tabelas estruturadas na nuvem de forma automatizada e sem perda de dados"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Adiciona as colunas militares na tabela de usuários caso não existam
+        # 1. Cria a tabela base de usuários caso ela falte
         cur.execute("""
-            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS xp INT DEFAULT 0;
-            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS patente VARCHAR(50) DEFAULT 'Recruta';
-            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS streak_atual INT DEFAULT 0;
-            ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ultima_atividade DATE DEFAULT CURRENT_DATE;
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL UNIQUE,
+                senha VARCHAR(255) NOT NULL,
+                data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
+        conn.commit()
+
+        # 2. Injeta as novas colunas individualmente com tratamento de erro isolado para evitar falhas do Postgres
+        colunas_novas = [
+            ("xp", "INT DEFAULT 0"),
+            ("patente", "VARCHAR(50) DEFAULT 'Recruta'"),
+            ("streak_atual", "INT DEFAULT 0"),
+            ("ultima_atividade", "DATE DEFAULT CURRENT_DATE")
+        ]
         
-        # 2. Cria a tabela de conquistas/medalhas dos soldados
+        for nome_coluna, tipo_coluna in colunas_novas:
+            try:
+                cur.execute(f"ALTER TABLE usuarios ADD COLUMN {nome_coluna} {tipo_coluna};")
+                conn.commit()
+                print(f"🪖 Coluna [{nome_coluna}] injetada com sucesso!")
+            except Exception:
+                conn.rollback() # Se a coluna já existia, o Postgres dá erro, nós limpamos e continuamos
+                print(f"ℹ️ Coluna [{nome_coluna}] já estava presente ou pulada.")
+
+        # 3. Cria as tabelas de suporte gamificado
         cur.execute("""
             CREATE TABLE IF NOT EXISTS conquistas_usuario (
                 id SERIAL PRIMARY KEY,
@@ -82,7 +103,6 @@ def init_db():
             );
         """)
         
-        # 3. Cria a tabela de simulados realizados (caso ainda não tenha criado antes)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS simulados_realizados (
                 id SERIAL PRIMARY KEY,
@@ -92,13 +112,20 @@ def init_db():
                 data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS controle_atualizacao (
+                id SERIAL PRIMARY KEY,
+                ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         
         conn.commit()
         cur.close()
         conn.close()
-        print("🎖️ Banco de dados militar sincronizado com sucesso!")
+        print("✅ [DATABASE] Sincronismo estrutural completo e sem falhas!")
     except Exception as e:
-        print(f"❌ Erro ao inicializar o banco de dados: {e}")
+        print(f"❌ [DATABASE ERROR]: {str(e)}")
 
 def inicializar_banco():
     """Garante as tabelas na nuvem com SQL correto para PostgreSQL"""
