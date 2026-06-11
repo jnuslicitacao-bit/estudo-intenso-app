@@ -57,12 +57,12 @@ def get_db_connection():
         )
 
 def init_db():
-    """Garante as colunas e tabelas estruturadas na nuvem de forma automatizada e sem perda de dados"""
+    """Garante todas as tabelas e colunas alinhadas cirurgicamente no Postgres do Render"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Cria a tabela base de usuários caso ela falte
+        # 1. Garante a tabela base de usuários
         cur.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
@@ -74,24 +74,54 @@ def init_db():
         """)
         conn.commit()
 
-        # 2. Injeta as novas colunas individualmente com tratamento de erro isolado para evitar falhas do Postgres
-        colunas_novas = [
+        # 2. Injeta colunas de gamificação na tabela de usuários de forma isolada
+        colunas_usuarios = [
             ("xp", "INT DEFAULT 0"),
             ("patente", "VARCHAR(50) DEFAULT 'Recruta'"),
             ("streak_atual", "INT DEFAULT 0"),
             ("ultima_atividade", "DATE DEFAULT CURRENT_DATE")
         ]
-        
-        for nome_coluna, tipo_coluna in colunas_novas:
+        for nome_col, tipo_col in colunas_usuarios:
             try:
-                cur.execute(f"ALTER TABLE usuarios ADD COLUMN {nome_coluna} {tipo_coluna};")
+                cur.execute(f"ALTER TABLE usuarios ADD COLUMN {nome_col} {tipo_col};")
                 conn.commit()
-                print(f"🪖 Coluna [{nome_coluna}] injetada com sucesso!")
             except Exception:
-                conn.rollback() # Se a coluna já existia, o Postgres dá erro, nós limpamos e continuamos
-                print(f"ℹ️ Coluna [{nome_coluna}] já estava presente ou pulada.")
+                conn.rollback()
 
-        # 3. Cria as tabelas de suporte gamificado
+        # 3. Garante a tabela de Simulados Realizados histórica
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS simulados_realizados (
+                id SERIAL PRIMARY KEY,
+                usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+                materia VARCHAR(100) NOT NULL,
+                nota INT NOT NULL,
+                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 4. Garante a tabela de Redações com todas as colunas exigidas pelo SELECT
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS redacoes (
+                id SERIAL PRIMARY KEY,
+                usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+                tema TEXT NOT NULL,
+                texto TEXT NOT NULL,
+                nota_final INT NOT NULL,
+                feedback_ia TEXT NOT NULL,
+                data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 5. Garante a existência da coluna data_envio caso a tabela redacoes seja legada antiga
+        try:
+            cur.execute("ALTER TABLE redacoes ADD COLUMN data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # 6. Garante o restante das tabelas do ecossistema
         cur.execute("""
             CREATE TABLE IF NOT EXISTS conquistas_usuario (
                 id SERIAL PRIMARY KEY,
@@ -101,29 +131,16 @@ def init_db():
                 data_ganha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(usuario_id, titulo_conquista)
             );
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS simulados_realizados (
-                id SERIAL PRIMARY KEY,
-                usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
-                materia VARCHAR(100) NOT NULL,
-                nota INT NOT NULL,
-                data_realizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        cur.execute("""
             CREATE TABLE IF NOT EXISTS controle_atualizacao (
                 id SERIAL PRIMARY KEY,
                 ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        
         conn.commit()
+        
         cur.close()
         conn.close()
-        print("✅ [DATABASE] Sincronismo estrutural completo e sem falhas!")
+        print("✅ [DATABASE] Varredura completa! Todas as tabelas e colunas estão operacionais.")
     except Exception as e:
         print(f"❌ [DATABASE ERROR]: {str(e)}")
 
@@ -981,30 +998,30 @@ def auth_callback():
 
 @app.route('/api/ranking', methods=['GET'])
 def obter_ranking():
-    """Retorna os melhores soldados posicionados por mérito de XP"""
+    """Retorna os melhores soldados posicionados por mérito de XP com fallbacks de segurança"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT nome, patente, xp, streak_atual 
+            SELECT COALESCE(nome, 'Estudante Anônimo'), COALESCE(patente, 'Recruta'), COALESCE(xp, 0), COALESCE(streak_atual, 0) 
             FROM usuarios 
-            ORDER BY xp DESC 
+            WHERE nome IS NOT NULL
+            ORDER BY COALESCE(xp, 0) DESC 
             LIMIT 10;
         """)
         usuarios_ranking = cur.fetchall()
         cur.close()
         conn.close()
 
-        lista_ranking = []
-        for u in usuarios_ranking:
-            lista_ranking.append({
-                "nome": u[0],
-                "patente": u[1],
-                "xp": u[2],
-                "streak": u[3]
-            })
+        lista_ranking = [{
+            "nome": u[0],
+            "patente": u[1],
+            "xp": u[2],
+            "streak": u[3]
+        } for u in usuarios_ranking]
         return jsonify(lista_ranking), 200
     except Exception as e:
+        print(f"❌ ERRO NA ROTA DE RANKING: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route('/')
