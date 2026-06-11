@@ -1012,12 +1012,12 @@ def obter_galeria_conquistas():
 # if __name__ == '__main__':
 #     app = Flask(__name__)  <-- O Gunicorn não lê aqui dentro!
 
-#  FORMA CORRETA (No escopo global do arquivo, encostado na esquerda):
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 CORS(app)
 
-# No final do arquivo:
+
 if __name__ == '__main__':
     porta = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=porta)
