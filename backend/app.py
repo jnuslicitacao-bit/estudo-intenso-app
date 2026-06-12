@@ -624,32 +624,9 @@ def status_sistema():
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
     try:
-        prompt = """
-        Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
-        Retorne estritamente em formato JSON puro (um array de objetos), sem usar blocos de código markdown (não coloque ```json no início).
-        Use a estrutura EXATA:
-        [
-          {"materia": "Matemática", "enunciado": "...", "opcoes": {"A": "..", "B": "..", "C": "..", "D": "..", "E": ".."}, "correta": "A"}
-        ]
-        """
-        resposta = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
-        )
-        
-        texto_resposta = resposta.choices[0].message.content.strip()
-        if texto_resposta.startswith("```json"):
-            texto_resposta = texto_resposta.replace("```json", "", 1)
-        if texto_resposta.endswith("```"):
-            texto_resposta = texto_resposta[:-3]
-        texto_resposta = texto_resposta.strip()
-
-        questoes = json.loads(texto_resposta)
-        
+        # 1. Garante que a tabela de questões exista ANTES de chamar a IA
         conn = get_db_connection()
         cur = conn.cursor()
-        
         cur.execute("""
             CREATE TABLE IF NOT EXISTS questoes (
                 id SERIAL PRIMARY KEY,
@@ -666,6 +643,30 @@ def atualizar_sistema():
         """)
         conn.commit()
 
+        prompt = """
+        Gere 3 questões de múltipla escolha inéditas sendo: 1 de Matemática, 1 de Português e 1 de História.
+        Retorne estritamente em formato JSON puro (um array de objetos), sem usar blocos de código markdown (não coloque ```json no início).
+        Use a estrutura EXATA:
+        [
+          {"materia": "Matemática", "enunciado": "...", "opcoes": {"A": "..", "B": "..", "C": "..", "D": "..", "E": ".."}, "correta": "A"}
+        ]
+        """
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        
+        texto_resposta = resposta.choices[0].message.content.strip()
+        
+        # Limpeza robusta contra Markdown do modelo da OpenAI
+        if "```json" in texto_resposta:
+            texto_resposta = texto_resposta.split("```json")[1].split("```")[0].strip()
+        elif "```" in texto_resposta:
+            texto_resposta = texto_resposta.split("```")[1].split("```")[0].strip()
+
+        questoes = json.loads(texto_resposta)
+        
         for q in questoes:
             opc = q.get('opcoes', {})
             alt_a = opc.get('A') or opc.get('a') or 'Alternativa A'
@@ -673,14 +674,17 @@ def atualizar_sistema():
             alt_c = opc.get('C') or opc.get('c') or 'Alternativa C'
             alt_d = opc.get('D') or opc.get('d') or 'Alternativa D'
             alt_e = opc.get('E') or opc.get('e') or 'Alternativa E'
+            
+            # Blindagem para aceitar tanto 'correta' quanto 'resposta_correta'
             correta = q.get('correta') or q.get('resposta_correta') or 'A'
 
             cur.execute(
                 """INSERT INTO questoes (materia, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, resposta_correta) 
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);""",
-                (q.get('materia', 'Geral'), q.get('enunciado'), alt_a, alt_b, alt_c, alt_d, alt_e, str(correta).upper())
+                (q.get('materia', 'Geral'), q.get('enunciado'), alt_a, alt_b, alt_c, alt_d, alt_e, str(correta).upper().strip())
             )
             
+        # Atualiza a tabela de controle de sincronismo
         cur.execute("INSERT INTO controle_atualizacao (ultima_atualizacao) VALUES (%s);", (datetime.now(),))
         conn.commit()
         cur.close()
@@ -688,41 +692,12 @@ def atualizar_sistema():
         
         return jsonify({"status": "sucesso", "mensagem": "Banco de dados alimentado com sucesso!"}), 200
     except Exception as e:
-        return jsonify({"status": "erro", "mensagem": str(e)}), 500
-
-
-@app.route('/api/insights', methods=['GET'])
-def obter_insights():
-    usuario_id = request.args.get('usuario_id')
-    if not usuario_id:
-        return jsonify({"status": "erro", "mensagem": "ID em falta"}), 400
-        
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT materia, nota FROM simulados_realizados WHERE usuario_id = %s ORDER BY id DESC LIMIT 5;", (usuario_id,))
-        historico = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        if not historico:
-            return jsonify({"insight": "Realize seu primeiro simulado para a inteligência ativa analisar seus pontos fracos!"}), 200
-            
-        dados_estudo = ", ".join([f"Matéria: {h[0]} (Nota: {h[1]}%)" for h in historico])
-        
-        prompt = f"""
-        Com base no seguinte histórico recente de simulados do aluno: [{dados_estudo}].
-        Identifique a maior fraqueza dele e retorne uma única dica cirúrgica e motivadora de até 3 linhas de como ele pode melhorar essa matéria específica.
-        """
-        resposta = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4
-        )
-        
-        return jsonify({"insight": resposta.choices[0].message.content.strip()}), 200
-    except Exception as e:
-        return jsonify({"insight": "Análise indisponível no momento."}), 200
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            cur.close()
+            conn.close()
+        print(f"❌ ERRO CRÍTICO NA ATUALIZAÇÃO: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": f"Erro interno: {str(e)}"}), 500
 
 
 @app.route('/api/gabarito/comentar', methods=['POST'])
