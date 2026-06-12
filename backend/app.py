@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
 
-# Adicione esta importação no topo do app.py
+# Importações do sistema de gamificação
 from gamificacao import calcular_patente, processar_xp_simulado, processar_xp_redacao, obter_feedback_militar
 
 # 🌟 SÓ CARREGA O .ENV SE ESTIVER LOCALMENTE (Impede o bug de apagar as variáveis no Render)
@@ -20,7 +20,9 @@ if not os.environ.get("RENDER"):
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
-CORS(app)
+
+# CONFIGURAÇÃO DO CORS CORRIGIDA (Permite conexões externas do frontend no Render)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 # Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -38,7 +40,7 @@ google = oauth.register(
 
 
 def get_db_connection():
-    """Conecta ao banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
+    """Conecta au banco PostgreSQL usando a URL de Ambiente do Render ou Localhost"""
     database_url = os.environ.get("DATABASE_URL")
     
     if not database_url:
@@ -87,7 +89,7 @@ def init_db():
             except Exception:
                 conn.rollback()
 
-        # (Coloque este bloco logo após a criação da tabela conquistas_usuario)
+        # Garante a tabela de missões diárias
         cur.execute("""
             CREATE TABLE IF NOT EXISTS missoes_diarias (
                 id SERIAL PRIMARY KEY,
@@ -847,6 +849,7 @@ def obter_ranking():
 def home():
     return {"status": "online", "mensagem": "API do Estudo Intensivo operando com sucesso!"}, 200
 
+
 @app.route('/api/missoes', methods=['GET'])
 def obter_missoes_diarias():
     """Busca ou gera as missões do dia para o soldado"""
@@ -876,7 +879,6 @@ def obter_missoes_diarias():
                 ("Acertar mais de 70% em um caderno", 60)
             ]
             
-            # Escolhe 3 missões aleatórias sem repetir
             import random
             missoes_do_dia = random.sample(pool_missoes, 3)
             
@@ -890,7 +892,6 @@ def obter_missoes_diarias():
                     conn.rollback()
             conn.commit()
             
-            # Recarrega para trazer com os IDs certos do banco
             cur.execute("""
                 SELECT id, descricao, xp_recompensa, concluida 
                 FROM missoes_diarias 
@@ -927,7 +928,6 @@ def concluir_missao_diaria():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Verifica se a missão já não foi concluída antes para evitar trapaças
         cur.execute("SELECT concluida, xp_recompensa, descricao FROM missoes_diarias WHERE id = %s AND usuario_id = %s;", (missao_id, usuario_id))
         registro = cur.fetchone()
         
@@ -938,15 +938,12 @@ def concluir_missao_diaria():
             
         xp_ganho = registro[1]
         
-        # Atualiza o status da missão
         cur.execute("UPDATE missoes_diarias SET concluida = TRUE WHERE id = %s;", (missao_id,))
         
-        # Bonifica o soldado com o XP da missão
         cur.execute("UPDATE usuarios SET xp = xp + %s WHERE id = %s RETURNING xp, patente;", (xp_ganho, usuario_id))
         usuario_atualizado = cur.fetchone()
         novo_xp, patente_antiga = usuario_atualizado[0], usuario_atualizado[1]
         
-        # Verifica promoção
         nova_patente = calcular_patente(novo_xp)
         promocao = False
         if nova_patente != patente_antiga:
@@ -966,6 +963,7 @@ def concluir_missao_diaria():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
+
 @app.route('/api/conquistas', methods=['GET'])
 def obter_galeria_conquistas():
     """Retorna o catálogo completo de medalhas cruzado com as conquistas reais do soldado"""
@@ -974,7 +972,6 @@ def obter_galeria_conquistas():
         return jsonify({"status": "erro", "mensagem": "Usuário não identificado."}), 400
         
     try:
-        # Catálogo Oficial do Estado-Maior (Todas as conquistas disponíveis na plataforma)
         CATALOGO_MEDALHAS = [
             {"titulo": "Atirador de Elite", "descricao": "Alcançou 100% de acertos em qualquer simulado.", "icone": "🎯"},
             {"titulo": "Escritor de Ouro", "descricao": "Alcançou nota igual ou superior a 900 na Redação.", "icone": "🥇"},
@@ -987,14 +984,12 @@ def obter_galeria_conquistas():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Busca apenas os títulos das medalhas que o usuário já desbloqueou de verdade
         cur.execute("SELECT titulo_conquista FROM conquistas_usuario WHERE usuario_id = %s;", (usuario_id,))
         desbloqueadas = [row[0] for row in cur.fetchall()]
         
         cur.close()
         conn.close()
 
-        # Monta a resposta final anexando a flag 'desbloqueada' true ou false
         galeria_final = []
         for medalha in CATALOGO_MEDALHAS:
             galeria_final.append({
@@ -1008,16 +1003,8 @@ def obter_galeria_conquistas():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-# ❌ ERRO COMUM: Não faça isso!
-# if __name__ == '__main__':
-#     app = Flask(__name__)  <-- O Gunicorn não lê aqui dentro!
 
-
-app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
-CORS(app)
-
-
+# Inicialização local do servidor de desenvolvimento
 if __name__ == '__main__':
     porta = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=porta)
