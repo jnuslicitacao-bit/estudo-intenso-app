@@ -387,14 +387,16 @@
         }
 
         function loginComGoogle() {
-            // Callback dinâmico calculado com base no domínio ativo (local ou produção)
-            const redirectUri = window.location.origin + '/api/auth/callback';
-            
-            // Dispara para o endpoint OAuth configurado no seu Flask do Render
-            const backendUrl = `https://estudo-intensivo-backend.onrender.com/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
-            
-            window.location.href = backendUrl;
-        }
+    // 1. A URL de retorno oficial cadastrada no seu console do Google aponta para o BACK-END
+    const redirectUri = 'https://estudo-intensivo-backend.onrender.com/api/auth/callback';
+    
+    // 2. Dispara a requisição para o endpoint do Flask iniciar o aperto de mão com o Google
+    const backendUrl = `https://estudo-intensivo-backend.onrender.com/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    
+    // 3. Redireciona o soldado para a validação
+    window.location.href = backendUrl;
+}
+        
     </script>
 </body>
 </html>
