@@ -3,7 +3,7 @@ import json
 import urllib.parse
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import psycopg2
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -22,11 +22,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 
 # CONFIGURAÇÃO DO CORS CORRIGIDA (Permite conexões externas e libera preflight de cabeçalhos)
-CORS(app, 
-     resources={r"/*": {"origins": "*"}}, 
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+CORS(app, supports_credentials=True)
 
 # Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -1017,8 +1013,10 @@ def obter_galeria_conquistas():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-@app.route('/api/diagnostico/gerar', methods=['POST'])
+@app.route('/api/diagnostico/gerar', methods=['POST', 'OPTIONS'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def gerar_diagnostico_ia():
+    # ... todo o resto do código da função continua igual ...
     """Analisa o nivelamento inicial do aluno e cospe o plano de ataque"""
     dados = request.get_json()
     if not dados:
@@ -1063,8 +1061,10 @@ def gerar_diagnostico_ia():
         print(f"❌ ERRO NO DIAGNÓSTICO IA: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-@app.route('/api/estudante/analise-preditiva', methods=['GET'])
+@app.route('/api/estudante/analise-preditiva', methods=['GET', 'OPTIONS'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def obter_analise_preditiva():
+    # ... todo o resto do código da função continua igual ...
     """Gera a probabilidade matemática de aprovação e o mapa de deficiências (Onda 2)"""
     usuario_id = request.args.get('usuario_id')
     if not usuario_id:
@@ -1176,8 +1176,10 @@ def obter_analise_preditiva():
         print(f"❌ ERRO ONDA 2 ANALISE: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-@app.route('/api/tutor/perguntar', methods=['POST'])
+@app.route('/api/tutor/perguntar', methods=['POST', 'OPTIONS'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def perguntar_tutor_ia():
+    # ... todo o resto do código da função continua igual ...
     """Chat tático contextualizado 24h para tirar dúvidas do aluno"""
     dados = request.get_json()
     if not dados:
