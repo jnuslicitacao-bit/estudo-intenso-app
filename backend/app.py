@@ -623,10 +623,12 @@ def status_sistema():
 
 @app.route('/api/sistema/atualizar', methods=['POST'])
 def atualizar_sistema():
+    """Popula o banco com segurança, adaptando dinamicamente as colunas do banco"""
     try:
-        # 1. Garante que a tabela de questões exista ANTES de chamar a IA
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Garante a tabela atualizada
         cur.execute("""
             CREATE TABLE IF NOT EXISTS questoes (
                 id SERIAL PRIMARY KEY,
@@ -659,7 +661,7 @@ def atualizar_sistema():
         
         texto_resposta = resposta.choices[0].message.content.strip()
         
-        # Limpeza robusta contra Markdown do modelo da OpenAI
+        # Limpeza agressiva contra marcações markdown da OpenAI
         if "```json" in texto_resposta:
             texto_resposta = texto_resposta.split("```json")[1].split("```")[0].strip()
         elif "```" in texto_resposta:
@@ -675,7 +677,6 @@ def atualizar_sistema():
             alt_d = opc.get('D') or opc.get('d') or 'Alternativa D'
             alt_e = opc.get('E') or opc.get('e') or 'Alternativa E'
             
-            # Blindagem para aceitar tanto 'correta' quanto 'resposta_correta'
             correta = q.get('correta') or q.get('resposta_correta') or 'A'
 
             cur.execute(
@@ -684,7 +685,6 @@ def atualizar_sistema():
                 (q.get('materia', 'Geral'), q.get('enunciado'), alt_a, alt_b, alt_c, alt_d, alt_e, str(correta).upper().strip())
             )
             
-        # Atualiza a tabela de controle de sincronismo
         cur.execute("INSERT INTO controle_atualizacao (ultima_atualizacao) VALUES (%s);", (datetime.now(),))
         conn.commit()
         cur.close()
@@ -698,6 +698,41 @@ def atualizar_sistema():
             conn.close()
         print(f"❌ ERRO CRÍTICO NA ATUALIZAÇÃO: {str(e)}")
         return jsonify({"status": "erro", "mensagem": f"Erro interno: {str(e)}"}), 500
+
+@app.route('/api/insights', methods=['GET'])
+def obter_insights():
+    """Garante que a rota responda exatamente ao GET /api/insights do frontend"""
+    usuario_id = request.args.get('usuario_id')
+    if not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "ID em falta"}), 400
+        
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT materia, nota FROM simulados_realizados WHERE usuario_id = %s ORDER BY id DESC LIMIT 5;", (usuario_id,))
+        historico = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not historico:
+            return jsonify({"insight": "Realize seu primeiro simulado para a inteligência ativa analisar seus pontos fracos!"}), 200
+            
+        dados_estudo = ", ".join([f"Matéria: {h[0]} (Nota: {h[1]}%)" for h in historico])
+        
+        prompt = f"""
+        Com base no seguinte histórico recente de simulados do aluno: [{dados_estudo}].
+        Identifique a maior fraqueza dele e retorne uma única dica cirúrgica e motivadora de até 3 linhas de como ele pode melhorar essa matéria específica.
+        """
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+        
+        return jsonify({"insight": resposta.choices[0].message.content.strip()}), 200
+    except Exception as e:
+        print(f"❌ ERRO NA ROTA INSIGHTS: {str(e)}")
+        return jsonify({"insight": "Análise inteligente temporariamente indisponível."}), 200
 
 
 @app.route('/api/gabarito/comentar', methods=['POST'])
