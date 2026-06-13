@@ -3,255 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo Intensivo - Login</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    <script src="config.js"></script>
+    <title>Estudo Intensivo: Resistência Intelectual - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-global: #f1f5f9;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
+            --cor-principal: #3a5335; /* Verde Oliva Militar */
+            --cor-neon: #4ef2a2; /* Verde Neon de Interface/HUD */
+            --cor-escura: #0d1310; /* Fundo Carbono */
+            --cor-painel: rgba(20, 30, 25, 0.75); /* Vidro fumê tático */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-global);
-            color: var(--text-main);
+            background-color: var(--cor-escura);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* CONTAINER DIVIDIDO (SPLIT SCREEN) */
+        .login-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* LADO ESQUERDO: Painel de Comando e Propaganda */
+        .painel-propaganda {
+            flex: 1;
+            background: linear-gradient(rgba(13, 19, 16, 0.85), rgba(58, 83, 53, 0.4)), 
+                        url('https://images.unsplash.com/photo-1590233665715-bc44163013b5?q=80&w=1200') center center no-repeat;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 10% 5%;
+            border-right: 3px solid var(--cor-principal);
+            position: relative;
+        }
+
+        /* Detalhe estético de linhas de varredura (Scanlines) estilo monitor antigo */
+        .painel-propaganda::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        .logo-militar {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(78, 242, 162, 0.3);
+            margin-bottom: 10px;
+            line-height: 1.1;
+        }
+
+        .logo-subtitulo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--cor-neon);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
+        }
+
+        .frase-chamada {
+            font-size: 1.2rem;
+            color: #b3bfb8;
+            max-width: 500px;
+            line-height: 1.6;
+            border-left: 4px solid var(--cor-principal);
+            padding-left: 15px;
+        }
+
+        /* LADO DIREITO: Formunário e HUD de Autenticação */
+        .painel-formulario {
+            flex: 1.2;
+            background: linear-gradient(135deg, #111a15 0%, #070b09 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .login-container {
-            background: var(--card-bg);
             padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        /* Grade cibernética de fundo */
+        .painel-formulario::after {
+            content: "";
+            position: absolute;
+            width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(78, 242, 162, 0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(78, 242, 162, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        .hud-box {
+            background: var(--cor-painel);
+            border: 1px solid rgba(78, 242, 162, 0.2);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(78, 242, 162, 0.05);
             width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
+            max-width: 450px;
+            padding: 40px;
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 5;
         }
 
-        .logo-area {
+        /* Cantoneiras decorativas de HUD militar */
+        .hud-box::before, .hud-box::after {
+            content: ""; position: absolute; width: 12px; height: 12px; border-color: var(--cor-neon); border-style: solid;
+        }
+        .hud-box::before { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+        .hud-box::after { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+
+        .hud-titulo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
             text-align: center;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--text-main);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 5px;
         }
 
-        .subtitle {
+        .hud-subtitulo {
+            font-size: 0.85rem;
             text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
+            color: var(--cor-neon);
+            text-transform: uppercase;
+            letter-spacing: 1px;
             margin-bottom: 30px;
         }
 
-        .form-group {
+        .grupo-campo {
             margin-bottom: 20px;
+            position: relative;
         }
 
-        .form-group label {
+        .grupo-campo label {
             display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-main);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            font-size: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            box-sizing: border-box;
-            background-color: #f8fafc;
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .btn-submit {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
-        }
-
-        .btn-submit:hover {
-            background: var(--primary-hover);
-        }
-
-        /* 🌐 BOTÃO GOOGLE SOCIAL LOGIN */
-        .btn-google {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            background-color: #ffffff;
-            color: #1f2937;
-            border: 1px solid #cbd5e1;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-            margin-top: 15px;
-            box-sizing: border-box;
-        }
-
-        .btn-google:hover {
-            background-color: #f8fafc;
-            border-color: #94a3b8;
-        }
-
-        .btn-google svg {
-            display: block;
-        }
-
-        .divisoria {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            color: var(--text-muted);
-            margin: 20px 0;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            color: #9cb0a5;
+            margin-bottom: 8px;
         }
-        .divisoria::before, .divisoria::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
-        .divisoria:not(:empty)::before { margin-right: 1em; }
-        .divisoria:not(:empty)::after { margin-left: 1em; }
 
-        .footer-links {
-            text-align: center;
+        .grupo-campo input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(13, 19, 16, 0.9);
+            border: 1px solid rgba(156, 176, 165, 0.4);
+            border-radius: 3px;
+            color: #ffffff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .grupo-campo input:focus {
+            outline: none;
+            border-color: var(--cor-neon);
+            box-shadow: 0 0 10px rgba(78, 242, 162, 0.2);
+            background: #0d1310;
+        }
+
+        /* BOTÃO ENTRAR CUSTOMIZADO */
+        .btn-entrar {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(90deg, #2e422b, #3a5335);
+            border: 1px solid var(--cor-neon);
+            border-radius: 3px;
+            color: #ffffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn-entrar:hover {
+            background: linear-gradient(90deg, #3a5335, #4a6b43);
+            box-shadow: 0 0 15px rgba(78, 242, 162, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-entrar:active {
+            transform: translateY(1px);
+        }
+
+        /* LINKS ADICIONAIS */
+        .hud-links {
             margin-top: 25px;
-            font-size: 14px;
-            color: var(--text-muted);
+            text-align: center;
+            font-size: 0.9rem;
         }
 
-        .footer-links a {
-            color: var(--primary);
+        .hud-links a {
+            color: #9cb0a5;
             text-decoration: none;
-            font-weight: 600;
+            transition: color 0.2s;
         }
 
-        .footer-links a:hover {
+        .hud-links a:hover {
+            color: var(--cor-neon);
             text-decoration: underline;
         }
 
-        /* 📱 Responsividade Mobile Corrigida */
-        @media (max-width: 480px) {
-            body {
-                align-items: flex-start;
-                padding: 20px;
-                background-color: white;
-            }
-            .login-container {
-                padding: 25px 5px;
-                box-shadow: none;
-                border-radius: 0;
-            }
-            .form-group input, .btn-submit, .btn-google {
-                padding: 14px;
-                font-size: 16px; /* Evita zoom automático no iOS */
-            }
+        .msg-erro {
+            background: rgba(235, 64, 52, 0.15);
+            border: 1px solid #eb4034;
+            color: #ff6b61;
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+
+        /* Responsividade para telas menores/celulares */
+        @media (max-width: 850px) {
+            .painel-propaganda { display: none; }
+            .painel-formulario::after { background-size: 20px 20px; }
         }
     </style>
 </head>
 <body>
 
-<div class="login-container">
-    <div class="logo-area">🎓 Estudo Intensivo</div>
-    <div class="subtitle">Acesse sua conta para continuar evoluindo</div>
+    <div class="login-container">
+        
+        <div class="painel-propaganda">
+            <h1 class="logo-militar">Estudo Intensivo</h1>
+            <h2 class="logo-subtitulo">Resistência Intelectual</h2>
+            <p class="frase-chamada">
+                Prepare-se para a batalha do conhecimento. Monitore suas missões diárias, conquiste patentes e submeta suas análises ao comando da Inteligência Artificial. Sua jornada estratégica começa aqui.
+            </p>
+        </div>
 
-    <div class="form-group">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" placeholder="seu@email.com">
+        <div class="painel-formulario">
+            <div class="hud-box">
+                <h3 class="hud-titulo">Comando de Acesso</h3>
+                <p class="hud-subtitulo">Identificação do Soldado</p>
+
+                <div id="erroBox" class="msg-erro"></div>
+
+                <form id="loginForm" onsubmit="executarLogin(event)">
+                    <div class="grupo-campo">
+                        <label for="email">Identificação (E-mail)</label>
+                        <input type="email" id="email" required placeholder="exemplo@missao.com">
+                    </div>
+
+                    <div class="grupo-campo">
+                        <label for="senha">Chave de Segurança</label>
+                        <input type="password" id="senha" required placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" class="btn-entrar">
+                        Entrar <span>&gt;</span>
+                    </button>
+                </form>
+
+                <div class="hud-links">
+                    <a href="cadastro.html">Não possui cadastro? Aliste-se agora</a>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="form-group">
-        <label for="senha">Senha</label>
-        <input type="password" id="senha" placeholder="••••••••">
-    </div>
+    <script>
+        async function executarLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const erroBox = document.getElementById('erroBox');
+            
+            erroBox.style.display = 'none';
 
-    <button class="btn-submit" onclick="executarLogin()">Entrar no Sistema →</button>
+            try {
+                // Aponta cirurgicamente para a sua API ativa no Render
+                const resposta = await fetch('https://estudo-intensivo-backend.onrender.com/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email, senha: senha })
+                });
 
-    <div class="divisoria">ou conecte-se com</div>
+                const dados = await reply = await resposta.json();
 
-    <button type="button" class="btn-google" onclick="autenticarComGoogle()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.5 24c0-1.61-.15-3.16-.42-4.69H24v8.87h12.62c-.54 2.9-2.18 5.37-4.64 7.03l7.23 5.61C43.43 40.41 46.5 33.1 46.5 24z"/>
-            <path fill="#FBBC05" d="M10.54 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.98-6.19z"/>
-            <path fill="#34A853" d="M24 38.5c-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48c6.48 0 11.93-2.13 15.89-5.81l-7.23-5.61c-2.11 1.42-4.81 2.43-4.66 2.43z"/>
-        </svg>
-        Entrar com o Google
-    </button>
-
-    <div class="footer-links">
-        Não tem uma conta? <a href="cadastro.html">Cadastre-se aqui</a>
-    </div>
-</div>
-
-<script>
-    async function executarLogin() {
-        const email = document.getElementById('email').value.trim();
-        const senha = document.getElementById('senha').value;
-
-        if (!email || !senha) {
-            alert("Preencha e-mail e senha!");
-            return;
-        }
-
-        try {
-            const resposta = await fetch(`${CONFIG.URL_BACKEND}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, senha })
-            });
-
-            const dados = await resposta.json();
-
-            if (resposta.ok && dados.status === "sucesso") {
-                localStorage.setItem('usuario_estudo', JSON.stringify(dados.usuario));
-                window.location.href = 'index.html';
-            } else {
-                alert("Falha no acesso: " + dados.mensagem);
+                if (resposta.ok && dados.status === "sucesso") {
+                    // Armazena a sessão local do soldado
+                    localStorage.setItem('usuario_id', dados.usuario.id);
+                    localStorage.setItem('usuario_nome', dados.usuario.nome);
+                    
+                    // Direciona o soldado para o quartel-general (dashboard)
+                    window.location.href = 'index.html';
+                } else {
+                    erroBox.innerText = dados.mensagem || "Credenciais recusadas pelo Comando.";
+                    erroBox.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Erro ao autenticar:", error);
+                erroBox.innerText = "Falha de comunicação com o servidor central.";
+                erroBox.style.display = 'block';
             }
-        } catch (erro) {
-            alert("Erro crítico de comunicação com o servidor.");
         }
-    }
-
-    function autenticarComGoogle() {
-        const callbackUrl = `${CONFIG.URL_BACKEND}/api/auth/callback`;
-        window.location.href = `${CONFIG.URL_BACKEND}/api/auth/google?redirect_uri=${encodeURIComponent(callbackUrl)}`;
-    }
-</script>
+    </script>
 </body>
 </html>
