@@ -1059,6 +1059,119 @@ def gerar_diagnostico_ia():
         print(f"❌ ERRO NO DIAGNÓSTICO IA: {str(e)}")
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
+@app.route('/api/estudante/analise-preditiva', methods=['GET'])
+def obter_analise_preditiva():
+    """Gera a probabilidade matemática de aprovação e o mapa de deficiências (Onda 2)"""
+    usuario_id = request.args.get('usuario_id')
+    if not usuario_id:
+        return jsonify({"status": "erro", "mensagem": "Soldado não identificado."}), 400
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 1. Busca a média geral de simulados
+        cur.execute("SELECT AVG(nota) FROM simulados_realizados WHERE usuario_id = %s;", (usuario_id,))
+        res_simulado = cur.fetchone()[0]
+        media_simulados = float(res_simulado) if res_simulado is not None else 0.0
+
+        # 2. Busca a média geral de redações
+        cur.execute("SELECT AVG(nota_final) FROM redacoes WHERE usuario_id = %s;", (usuario_id,))
+        res_redacao = cur.fetchone()[0]
+        media_redacoes = float(res_redacao) if res_redacao is not None else 0.0
+
+        # 3. Busca a constância (Streak) e XP atual do usuário
+        cur.execute("SELECT COALESCE(streak_atual, 0), COALESCE(xp, 0) FROM usuarios WHERE id = %s;", (usuario_id,))
+        usuario_dados = cur.fetchone()
+        streak = usuario_dados[0] if usuario_dados else 0
+        xp = usuario_dados[1] if usuario_dados else 0
+
+        # 4. Mapeamento por matéria para a Árvore de Habilidades
+        # Busca a média de acertos agrupada por disciplina
+        cur.execute("""
+            SELECT LOWER(materia), AVG(nota) 
+            FROM simulados_realizados 
+            WHERE usuario_id = %s 
+            GROUP BY LOWER(materia);
+        """, (usuario_id,))
+        notas_materias = {row[0]: float(row[1]) for row in cur.fetchall()}
+
+        cur.close()
+        conn.close()
+
+        # 📊 CÁLCULO DA PROBABILIDADE ATUAL (Fórmula Matemática Tática)
+        # Se o aluno não tem dados, a base começa em 10% (apenas por cadastro).
+        if media_simulados == 0 and media_redacoes == 0:
+            probabilidade_atual = 15
+        else:
+            # Peso de 50% para Simulados, 35% para Redação e 15% para Constância (Streak/XP)
+            fator_simulado = (media_simulados / 100) * 50
+            fator_redacao = (media_redacoes / 1000) * 35 if media_redacoes > 0 else 0
+            fator_constancia = min(((streak * 5) + (xp / 100)), 15) # Capado em 15% para não inflar
+            
+            probabilidade_atual = int(fator_simulado + fator_redacao + fator_constancia)
+            if probabilidade_atual < 10: probabilidade_atual = 10
+            if probabilidade_atual > 97: probabilidade_atual = 97 # Ninguém tem 100% antes da prova!
+
+        # 📈 PREDIÇÃO EM 30 DIAS (Simulação de ganho por disciplina e constância)
+        probabilidade_30_dias = min(int(probabilidade_atual + 12 + (streak * 0.5)), 99)
+
+        # 🌳 MONTAGEM DA ÁRVORE DE HABILIDADES (Classificação por Cores/Status)
+        materias_alvo = ["matemática", "português", "história", "geografia", "redação"]
+        arvore_habilidades = {}
+
+        for mat in materias_alvo:
+            if mat == "redação":
+                nota_ref = (media_redacoes / 10) if media_redacoes > 0 else -1
+            else:
+                nota_ref = map_nota = notas_materias.get(mat, -1)
+
+            # Classificação cirúrgica por faixas
+            if nota_ref == -1:
+                status = "🔴 NÃO PRATICADO"
+                cor = "critico"
+            elif nota_ref < 50:
+                status = "🔴 CRÍTICO (REVISAR JÁ)"
+                cor = "critico"
+            elif nota_ref < 75:
+                status = "🟡 ALERTA (PRATICAR)"
+                cor = "alerta"
+            else:
+                status = "✅ SOB CONTROLE"
+                cor = "estavel"
+            
+            arvore_habilidades[mat.capitalize()] = {
+                "nota": int(nota_ref) if nota_ref != -1 else 0,
+                "status": status,
+                "cor": cor
+            }
+
+        # 🤖 INSIGHT COMPLEMENTAR DE IA (Apenas se o aluno tiver histórico)
+        conselho_ia = "Realize simulados e envie redações para que o Estado-Maior calcule suas chances de sobrevivência no edital."
+        if media_simulados > 0 or media_redacoes > 0:
+            try:
+                prompt = f"O aluno possui {probabilidade_atual}% de chance de aprovação. Média Simulados: {media_simulados}%, Média Redação: {media_redacoes}. Dê um aviso curto de 2 linhas sobre o perigo de estagnar ou onde acelerar."
+                resposta = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.5
+                )
+                conselho_ia = resposta.choices[0].message.content.strip()
+            except Exception:
+                conselho_ia = "Mantenha a constância diária de tiro e redação para consolidar a progressão."
+
+        return jsonify({
+            "status": "sucesso",
+            "probabilidade_atual": probabilidade_atual,
+            "probabilidade_30_dias": probabilidade_30_dias,
+            "arvore": arvore_habilidades,
+            "conselho_ia": conselho_ia
+        }), 200
+
+    except Exception as e:
+        print(f"❌ ERRO ONDA 2 ANALISE: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
 @app.route('/api/tutor/perguntar', methods=['POST'])
 def perguntar_tutor_ia():
     """Chat tático contextualizado 24h para tirar dúvidas do aluno"""
