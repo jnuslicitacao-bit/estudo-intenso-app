@@ -21,9 +21,12 @@ if not os.environ.get("RENDER"):
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 
-# CONFIGURAÇÃO DO CORS CORRIGIDA (Permite conexões externas do frontend no Render)
-# LIBERAÇÃO TOTAL DE CORS PARA TODAS AS ROTAS DO ECOSSISTEMA
-CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "methods": "*"}}, supports_credentials=True)
+# CONFIGURAÇÃO DO CORS CORRIGIDA (Permite conexões externas e libera preflight de cabeçalhos)
+CORS(app, 
+     resources={r"/*": {"origins": "*"}}, 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -1211,22 +1214,6 @@ def perguntar_tutor_ia():
 
 # ... outras rotas acima ...
 
-# INTERCEPTADOR DE SEGURANÇA TÁTICA - LIBERAÇÃO DE CABEÇALHOS CORS MANUAL
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        resposta = make_response()
-        resposta.headers.add("Access-Control-Allow-Origin", "*")
-        resposta.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-        resposta.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
-        return resposta
-
-@app.after_request
-def add_cors_headers(resposta):
-    resposta.headers.add("Access-Control-Allow-Origin", "*")
-    resposta.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-    resposta.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
-    return resposta
 
 # Inicialização local do servidor de desenvolvimento (ESTE DEVE SER SEMPRE O ÚLTIMO)
 if __name__ == '__main__':
