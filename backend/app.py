@@ -1213,3 +1213,20 @@ def perguntar_tutor_ia():
 if __name__ == '__main__':
     porta = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=porta)
+
+# INTERCEPTADOR DE SEGURANÇA TÁTICA - LIBERAÇÃO DE CABEÇALHOS CORS MANUAL
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        resposta = make_response()
+        resposta.headers.add("Access-Control-Allow-Origin", "*")
+        resposta.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        resposta.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+        return resposta
+
+@app.after_request
+def add_cors_headers(resposta):
+    resposta.headers.add("Access-Control-Allow-Origin", "*")
+    resposta.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    resposta.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+    return resposta
