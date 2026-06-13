@@ -527,6 +527,20 @@
         <div class="user-profile-top">
             👤 <span id="nome-perfil-top">Estudante</span>
         </div>
+
+        <div class="card-modulo" style="border-left: 4px solid #4ef2a2;">
+            <h3 style="font-family: 'Orbitron', sans-serif; letter-spacing: 1px; margin-bottom: 10px;">
+                🤖 TREINADOR PESSOAL IA
+            </h3>
+            <p style="color: #9cb0a5; font-size: 0.9rem; margin-bottom: 15px;">
+                Gere seu diagnóstico de combate, descubra suas vulnerabilidades e receba um plano diário de aprovação.
+            </p>
+            <a href="treinador.html" style="
+                display: inline-block; padding: 10px 20px; background: #3a5335; 
+                color: white; text-decoration: none; font-family: 'Orbitron', sans-serif; 
+                font-size: 0.8rem; border: 1px solid #4ef2a2; border-radius: 3px;
+            ">Acessar Diretoria IA</a>
+        </div>
     </header>
 
     <main class="wrapper">
@@ -933,10 +947,116 @@
         }
     }
 
+    function alternarChatTutor() {
+    const chat = document.getElementById('chatTutorContainer');
+    const btn = document.getElementById('btnAbrirTutor');
+    
+    if (chat.style.display === 'none' || chat.style.display === '') {
+        chat.style.display = 'block';
+        btn.style.display = 'none';
+    } else {
+        chat.style.display = 'none';
+        btn.style.display = 'block';
+    }
+}
+
+async function enviarPerguntaTutor() {
+    const input = document.getElementById('txtPerguntaTutor');
+    const corpo = document.getElementById('corpoChatTutor');
+    const pergunta = input.value.trim();
+    
+    if (!pergunta) return;
+    
+    // Injeta a pergunta do aluno visualmente no chat
+    corpo.innerHTML += `
+        <div style="align-self: flex-end; background: #3a5335; padding: 8px; border-radius: 3px; max-width: 85%; color: white;">
+            ${pergunta}
+        </div>
+    `;
+    input.value = "";
+    corpo.scrollTop = corpo.scrollHeight;
+
+    // Coloca um indicador de "pensando"
+    const idLoading = "load_" + Date.now();
+    corpo.innerHTML += `
+        <div id="${idLoading}" style="background: rgba(156,176,165,0.1); padding: 8px; border-radius: 3px; align-self: flex-start; max-width: 85%; color: #9cb0a5; font-style: italic;">
+            Comando processando resposta...
+        </div>
+    `;
+    corpo.scrollTop = corpo.scrollHeight;
+
+    try {
+        const resposta = await fetch('https://estudo-intensivo-backend.onrender.com/api/tutor/perguntar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                pergunta: pergunta,
+                contexto: "Dashboard Geral do Estudante - Menu Principal"
+            })
+        });
+
+        const dados = await resposta.json();
+        document.getElementById(idLoading).remove();
+
+        if (resposta.ok && dados.status === "sucesso") {
+            corple = corpo.innerHTML += `
+                <div style="background: rgba(78, 242, 162, 0.1); padding: 8px; border-left: 2px solid #4ef2a2; border-radius: 3px; align-self: flex-start; max-width: 85%; color: #d1ded6;">
+                    ${dados.resposta}
+                </div>
+            `;
+        } else {
+            throw new Error();
+        }
+    } catch (error) {
+        document.getElementById(idLoading).remove();
+        corpo.innerHTML += `
+            <div style="background: rgba(235,64,52,0.1); padding: 8px; border-left: 2px solid #eb4034; border-radius: 3px; align-self: flex-start; max-width: 85%; color: #ff6b61;">
+                Erro de transmissão com a IA. Tente novamente.
+            </div>
+        `;
+    }
+    corpo.scrollTop = corpo.scrollHeight;
+}
+
     function fazerLogout() {
         localStorage.removeItem('usuario_estudo');
         window.location.href = 'login.html';
     }
 </script>
+
+<div id="chatTutorContainer" style="
+    position: fixed; bottom: 20px; right: 20px; width: 350px; 
+    background: rgba(20, 30, 25, 0.95); border: 1px solid #4ef2a2; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 4px; 
+    z-index: 9999; font-family: 'Roboto', sans-serif; display: none;
+">
+    <div style="background: #3a5335; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4ef2a2;">
+        <span style="font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: bold; letter-spacing: 1px;">
+            🪖 TUTOR MILITAR IA 24H
+        </span>
+        <button onclick="alternarChatTutor()" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.1rem;">×</button>
+    </div>
+    
+    <div id="corpoChatTutor" style="height: 250px; overflow-y: auto; padding: 15px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px; background: #0d1310;">
+        <div style="background: rgba(78, 242, 162, 0.1); padding: 8px; border-left: 2px solid #4ef2a2; border-radius: 3px; color: #d1ded6;">
+            Apresente-se, soldado! Qual conceito ou edital você deseja que o Comando desvende agora?
+        </div>
+    </div>
+    
+    <div style="padding: 10px; display: flex; gap: 5px; background: rgba(20, 30, 25, 0.5);">
+        <input type="text" id="txtPerguntaTutor" placeholder="Ex: Explique regra de três..." style="flex: 1; padding: 8px; background: #0d1310; border: 1px solid rgba(156, 176, 165, 0.3); color: white; border-radius: 3px; font-size: 0.85rem;">
+        <button onclick="enviarPerguntaTutor()" style="padding: 8px 12px; background: #3a5335; border: 1px solid #4ef2a2; color: white; cursor: pointer; border-radius: 3px; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">ENVIAR</button>
+    </div>
+</div>
+
+<button onclick="alternarChatTutor()" style="
+    position: fixed; bottom: 20px; right: 20px; padding: 15px 20px; 
+    background: #3a5335; color: white; border: 1px solid #4ef2a2; 
+    font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: bold;
+    cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-radius: 3px; z-index: 9998;
+" id="btnAbrirTutor">
+    💬 DUVIDA TÁTICA (IA 24H)
+</button>
+
 </body>
 </html>
