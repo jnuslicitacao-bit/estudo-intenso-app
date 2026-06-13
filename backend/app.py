@@ -1209,10 +1209,7 @@ def perguntar_tutor_ia():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
-# Inicialização local do servidor de desenvolvimento
-if __name__ == '__main__':
-    porta = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=porta)
+# ... outras rotas acima ...
 
 # INTERCEPTADOR DE SEGURANÇA TÁTICA - LIBERAÇÃO DE CABEÇALHOS CORS MANUAL
 @app.before_request
@@ -1230,3 +1227,8 @@ def add_cors_headers(resposta):
     resposta.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
     resposta.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
     return resposta
+
+# Inicialização local do servidor de desenvolvimento (ESTE DEVE SER SEMPRE O ÚLTIMO)
+if __name__ == '__main__':
+    porta = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=porta)
