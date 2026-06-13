@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudo Intensivo - Central Analítica e Predição</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cor-principal: #3a5335;
+            --cor-neon: #4ef2a2;
+            --cor-neon-alerta: #f2c94c;
+            --cor-neon-critico: #eb4034;
+            --cor-escura: #0d1310;
+            --cor-painel: rgba(20, 30, 25, 0.85);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { background-color: var(--cor-escura); color: #ffffff; padding: 30px; position: relative; min-height: 100vh; }
+        .container { max-width: 1100px; margin: 0 auto; position: relative; z-index: 5; }
+
+        .header-tatico {
+            border-bottom: 2px solid var(--cor-principal); padding-bottom: 20px; margin-bottom: 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .titulo-secao { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px; }
+        .titulo-secao span { color: var(--cor-neon); }
+        .btn-voltar {
+            padding: 10px 20px; background: rgba(13, 19, 16, 0.8); border: 1px solid var(--cor-principal);
+            color: #ffffff; text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; text-transform: uppercase;
+        }
+
+        .grid-predicao { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        
+        .hud-card {
+            background: var(--cor-painel); border: 1px solid rgba(78, 242, 162, 0.15); padding: 30px; border-radius: 4px; position: relative;
+        }
+        .hud-card::before {
+            content: ""; position: absolute; top: -2px; left: -2px; width: 12px; height: 12px; border-color: var(--cor-neon); border-style: solid; border-width: 2px 0 0 2px;
+        }
+
+        /* GRÁFICO DE PROBABILIDADE */
+        .box-porcentagem { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 20px 0; }
+        .num-grande { font-family: 'Orbitron', sans-serif; font-size: 4rem; font-weight: 700; color: var(--cor-neon); text-shadow: 0 0 15px rgba(78, 242, 162, 0.4); }
+        
+        .barra-progresso-container { background: #1a2620; width: 100%; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 10px; border: 1px solid rgba(78, 242, 162, 0.2); }
+        .barra-progresso { height: 100%; background: linear-gradient(90deg, var(--cor-principal), var(--cor-neon)); width: 0%; transition: width 1s ease-out; }
+
+        .alerta-ia { background: rgba(78, 242, 162, 0.05); border-left: 3px solid var(--cor-neon-alerta); padding: 15px; font-style: italic; color: #d1ded6; font-size: 0.95rem; margin-top: 20px; }
+
+        /* ÁRBORE DE HABILIDADES */
+        .titulo-card { font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 1.1rem; margin-bottom: 20px; color: #ffffff; }
+        .lista-habilidades { display: flex; flex-direction: column; gap: 15px; }
+        
+        .item-habilidade { display: grid; grid-template-columns: 150px 1fr 180px; align-items: center; background: rgba(13, 19, 16, 0.6); padding: 15px; border: 1px solid rgba(156, 176, 165, 0.1); }
+        .hab-nome { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; text-transform: uppercase; }
+        .hab-status { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; text-align: right; font-weight: 700; letter-spacing: 1px; }
+        
+        .status-estavel { color: var(--cor-neon); }
+        .status-alerta { color: var(--cor-neon-alerta); }
+        .status-critico { color: var(--cor-neon-critico); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-tatico">
+            <h1 class="titulo-secao">Mapeamento <span>Preditivo e Habilidades</span></h1>
+            <a href="index.html" class="btn-voltar">&lt; Voltar ao QG</a>
+        </div>
+
+        <div class="grid-predicao">
+            <div class="hud-card">
+                <h3 class="titulo-card">🎯 Probabilidade Atual de Aprovação</h3>
+                <div class="box-porcentagem">
+                    <div id="lblProbAtual" class="num-grande">0%</div>
+                    <p style="font-size: 0.9rem; color: #9cb0a5; line-height: 1.4;">Com base no volume tático de simulados realizados, rendimento em redação e constância operacional de acesso.</p>
+                </div>
+                <div class="barra-progresso-container">
+                    <div id="barraAtual" class="barra-progresso"></div>
+                </div>
+            </div>
+
+            <div class="hud-card">
+                <h3 class="titulo-card">📊 Estimativa de Salto (Próximos 30 dias)</h3>
+                <div class="box-porcentagem">
+                    <div id="lblProbFutura" class="num-grande" style="color: var(--cor-neon-alerta); text-shadow: 0 0 15px rgba(242, 201, 76, 0.4);">0%</div>
+                    <p style="font-size: 0.9rem; color: #9cb0a5; line-height: 1.4;">Projeção de ganho de eficiência intelectual mantendo o ritmo de resolução de cadernos sem interrupção de streak.</p>
+                </div>
+                <div class="barra-progresso-container" style="border-color: rgba(242, 201, 76, 0.2);">
+                    <div id="barraFutura" class="barra-progresso" style="background: linear-gradient(90deg, var(--cor-principal), var(--cor-neon-alerta));"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-card" style="margin-bottom: 30px;">
+            <h3 class="titulo-card">🪖 Alerta de Vetor Inteligente</h3>
+            <p id="txtConselho" class="alerta-ia">Analisando histórico de combate...</p>
+        </div>
+
+        <div class="hud-card">
+            <h3 class="titulo-card">🌳 Árvore de Proficiência (Matriz de Edital)</h3>
+            <div id="boxHabilidades" class="lista-habilidades">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            carregarAnalisePreditiva();
+        };
+
+        async function carregarAnalisePreditiva() {
+            const usuarioId = localStorage.getItem('usuario_id');
+            if (!usuarioId) {
+                alert("Soldado não identificado. Faça login novamente.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const resposta = await fetch(`https://estudo-intensivo-backend.onrender.com/api/estudante/analise-preditiva?usuario_id=${usuarioId}`);
+                if (!resposta.ok) throw new Error("Falha ao puxar matriz analítica.");
+                
+                const dados = await resposta.json();
+
+                // Anima as porcentagens e barras
+                document.getElementById('lblProbAtual').innerText = dados.probabilidade_atual + "%";
+                document.getElementById('barraAtual').style.width = dados.probabilidade_atual + "%";
+
+                document.getElementById('lblProbFutura').innerText = dados.probabilidade_30_dias + "%";
+                document.getElementById('barraFutura').style.width = dados.probabilidade_30_dias + "%";
+
+                document.getElementById('txtConselho').innerText = `"${dados.conselho_ia}"`;
+
+                // Montagem da árvore de proficiência
+                const boxHab = document.getElementById('boxHabilidades');
+                boxHab.innerHTML = "";
+
+                for (const [materia, info] of Object.entries(dados.arvore)) {
+                    boxHab.innerHTML += `
+                        <div class="item-habilidade">
+                            <div class="hab-nome">${materia}</div>
+                            <div class="barra-progresso-container" style="height: 6px; margin-top:0;">
+                                <div class="barra-progresso" style="width: ${info.nota === 0 ? 0 : (materia === 'Redação' ? (info.nota * 10) : info.nota)}%; background: ${info.cor === 'critico' ? 'var(--cor-neon-critico)' : (info.cor === 'alerta' ? 'var(--cor-neon-alerta)' : 'var(--cor-neon)')}"></div>
+                            </div>
+                            <div class="hab-status status-${info.cor}">${info.status} ${info.nota > 0 ? '('+info.nota+(materia==='Redação'?' pts':'%')+')' : ''}</div>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('txtConselho').innerText = "Erro ao sincronizar matriz de dados com o PostgreSQL.";
+            }
+        }
+    </script>
+</body>
+</html>
