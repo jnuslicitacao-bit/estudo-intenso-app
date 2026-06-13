@@ -22,7 +22,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "uma_chave_secreta_muito_segura_123")
 
 # CONFIGURAÇÃO DO CORS CORRIGIDA (Permite conexões externas do frontend no Render)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+# LIBERAÇÃO TOTAL DE CORS PARA TODAS AS ROTAS DO ECOSSISTEMA
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "methods": "*"}}, supports_credentials=True)
 
 # Busca a chave de API da OpenAI de forma segura no sistema operacional
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
