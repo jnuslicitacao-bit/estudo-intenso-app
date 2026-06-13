@@ -1013,6 +1013,87 @@ def obter_galeria_conquistas():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
+@app.route('/api/diagnostico/gerar', methods=['POST'])
+def gerar_diagnostico_ia():
+    """Analisa o nivelamento inicial do aluno e cospe o plano de ataque"""
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"status": "erro", "mensagem": "Dados do diagnóstico não recebidos."}), 400
+
+    nome_estudante = dados.get('nome', 'Soldado')
+    concurso_alvo = dados.get('concurso', 'Geral')
+    # O front enviará um dicionário com notas por matéria. Ex: {"Matemática": 40, "Português": 70}
+    desempenho = dados.get('desempenho', {}) 
+
+    prompt_sistema = "Você é o General-Instrutor de IA do Estudo Intensivo, especialista em alta performance nos estudos."
+    prompt_usuario = f"""
+    O estudante {nome_estudante} está se preparando para o concurso/vestibular: '{concurso_alvo}'.
+    Aqui está o desempenho atual dele no teste de nivelamento por matérias: {json.dumps(desempenho, ensure_ascii=False)}.
+
+    Gere um relatório tático de diagnóstico e um plano diário de ataque.
+    Retorne ESTRITAMENTE um objeto JSON puro, sem markdown (sem aspas ```json), com a estrutura exata abaixo:
+    {{
+      "nivel_atual": "Recruta Avançado / Combatente / etc",
+      "pontos_fortes": ["Matéria X - motivo breve", "Matéria Y"],
+      "pontos_fracos": ["Matéria Z - motivo breve"],
+      "analise_critica": "Frase de efeito realista e motivadora de até 3 linhas analisando as probabilidades dele.",
+      "plano_diario": [
+        {{"dia": "Segunda-feira", "foco": "Matéria Z (Teoria + 15 questões)", "estrategia": "Focar em tópicos base"}},
+        {{"dia": "Terça-feira", "foco": "Matéria X (Revisão ativa)", "estrategia": "Simulado rápido"}}
+      ]
+    }}
+    """
+
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.6
+        )
+        texto_resposta = resposta.choices[0].message.content.strip()
+        return jsonify(json.loads(texto_resposta)), 200
+    except Exception as e:
+        print(f"❌ ERRO NO DIAGNÓSTICO IA: {str(e)}")
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+@app.route('/api/tutor/perguntar', methods=['POST'])
+def perguntar_tutor_ia():
+    """Chat tático contextualizado 24h para tirar dúvidas do aluno"""
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"status": "erro", "mensagem": "Requisição inválida."}), 400
+
+    pergunta_aluno = dados.get('pergunta')
+    contexto_tela = dados.get('contexto', 'Dúvida geral de estudos') # Ex: Enunciado de uma questão que ele errou
+
+    if not pergunta_aluno:
+        return jsonify({"status": "erro", "mensagem": "A pergunta não pode estar vazia."}), 400
+
+    prompt_sistema = """Você é o Tutor Militar de IA do Estudo Intensivo. Seu papel é explicar conceitos complexos de forma cirúrgica, clara e altamente didática. Se o aluno pedir para explicar algo 'como se ele tivesse 12 anos', use metáforas simples. Sempre mantenha o tom encorajador e disciplinado."""
+    
+    prompt_usuario = f"""
+    CONTEXTO ATUAL DO ALUNO NA TELA: {contexto_tela}
+    PERGUNTA DO ALUNO: {pergunta_aluno}
+    
+    Responda diretamente ao aluno de forma limpa, formatada em tópicos curtos se necessário, sem enrolações. Maximo 6 linhas.
+    """
+
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            temperature=0.5
+        )
+        comentario_ia = resposta.choices[0].message.content.strip()
+        return jsonify({"status": "sucesso", "resposta": comentario_ia}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 # Inicialização local do servidor de desenvolvimento
 if __name__ == '__main__':
