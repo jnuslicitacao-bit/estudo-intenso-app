@@ -219,7 +219,7 @@
             <div class="topo-resultado">
                 <div class="bloco-status">
                     <div class="status-titulo">Nível de Combate Avaliado</div>
-                    <div id="lblNivel" class="status-valor">PROCESANDO...</div>
+                    <div id="lblNivel" class="status-valor">PROCESSANDO...</div>
                 </div>
                 <div class="bloco-status" style="border-color: var(--cor-neon-alerta);">
                     <div class="status-titulo">Diretriz Operacional do General</div>
@@ -256,8 +256,21 @@
         };
 
         async function enviarDiagnostico() {
+            // Sincroniza chaves de ID locais
+            const usuarioId = localStorage.getItem('usuario_id') || 
+                              localStorage.getItem('id') || 
+                              localStorage.getItem('user_id');
+                              
+            if (!usuarioId) {
+                alert("Soldado não identificado no navegador. Por favor, realize o login para sincronizar.");
+                window.location.href = 'login.html';
+                return;
+            }
+
             const concurso = document.getElementById('concursoAlvo').value;
-            const nomeEstudante = localStorage.getItem('usuario_nome') || 'Soldado';
+            const nomeEstudante = localStorage.getItem('usuario_nome') || 
+                                  localStorage.getItem('nome') || 
+                                  'Soldado';
 
             const desempenho = {
                 "Matemática": parseInt(document.getElementById('matematica').value) || 0,
@@ -271,21 +284,25 @@
             document.getElementById('painelLoading').style.display = 'block';
 
             try {
+                // Requisição tratada contra bloqueios de Preflight do CORS externo
                 const resposta = await fetch('https://estudo-intensivo-backend.onrender.com/api/diagnostico/gerar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json' 
+                    },
                     body: JSON.stringify({ nome: nomeEstudante, concurso: concurso, desempenho: desempenho })
                 });
 
                 if (!resposta.ok) throw new Error("Erro na resposta do Comando Central.");
                 const planoIa = await resposta.json();
                 
-                // Salva no navegador para evitar requisições extras desnecessárias
                 localStorage.setItem('treinador_plano', JSON.stringify(planoIa));
                 renderizarPlano(planoIa);
 
             } catch (error) {
-                alert("Falha tática: O comando de IA não respondeu. Verifique sua conexão.");
+                console.error(error);
+                alert("Falha tática: O comando de IA não respondeu ou o CORS barrou o pacote.");
                 document.getElementById('painelConfig').style.display = 'block';
             } finally {
                 document.getElementById('painelLoading').style.display = 'none';

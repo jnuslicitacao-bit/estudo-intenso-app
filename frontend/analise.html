@@ -48,7 +48,7 @@
 
         .alerta-ia { background: rgba(78, 242, 162, 0.05); border-left: 3px solid var(--cor-neon-alerta); padding: 15px; font-style: italic; color: #d1ded6; font-size: 0.95rem; margin-top: 20px; }
 
-        /* ÁRBORE DE HABILIDADES */
+        /* ÁRVORE DE HABILIDADES */
         .titulo-card { font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 1.1rem; margin-bottom: 20px; color: #ffffff; }
         .lista-habilidades { display: flex; flex-direction: column; gap: 15px; }
         
@@ -100,8 +100,7 @@
 
         <div class="hud-card">
             <h3 class="titulo-card">🌳 Árvore de Proficiência (Matriz de Edital)</h3>
-            <div id="boxHabilidades" class="lista-habilidades">
-                </div>
+            <div id="boxHabilidades" class="lista-habilidades"></div>
         </div>
     </div>
 
@@ -111,12 +110,17 @@
         };
 
         async function carregarAnalisePreditiva() {
-            const usuarioId = localStorage.getItem('usuario_id');
+            const usuarioId = localStorage.getItem('usuario_id') || 
+                              localStorage.getItem('id') || 
+                              localStorage.getItem('user_id');
+                              
             if (!usuarioId) {
                 alert("Soldado não identificado. Faça login novamente.");
                 window.location.href = 'login.html';
                 return;
             }
+            
+            localStorage.setItem('usuario_id', usuarioId);
 
             try {
                 const resposta = await fetch(`https://estudo-intensivo-backend.onrender.com/api/estudante/analise-preditiva?usuario_id=${usuarioId}`);
@@ -124,7 +128,7 @@
                 
                 const dados = await resposta.json();
 
-                // Anima as porcentagens e barras
+                // Atualiza dados e move as barras gráficas HUD
                 document.getElementById('lblProbAtual').innerText = dados.probabilidade_atual + "%";
                 document.getElementById('barraAtual').style.width = dados.probabilidade_atual + "%";
 
@@ -133,16 +137,18 @@
 
                 document.getElementById('txtConselho').innerText = `"${dados.conselho_ia}"`;
 
-                // Montagem da árvore de proficiência
+                // Renderiza a árvore de proficiência por matéria
                 const boxHab = document.getElementById('boxHabilidades');
                 boxHab.innerHTML = "";
 
                 for (const [materia, info] of Object.entries(dados.arvore)) {
+                    const pctBarra = info.nota === 0 ? 0 : (materia === 'Redação' ? (info.nota * 10) : info.nota);
+                    
                     boxHab.innerHTML += `
                         <div class="item-habilidade">
                             <div class="hab-nome">${materia}</div>
                             <div class="barra-progresso-container" style="height: 6px; margin-top:0;">
-                                <div class="barra-progresso" style="width: ${info.nota === 0 ? 0 : (materia === 'Redação' ? (info.nota * 10) : info.nota)}%; background: ${info.cor === 'critico' ? 'var(--cor-neon-critico)' : (info.cor === 'alerta' ? 'var(--cor-neon-alerta)' : 'var(--cor-neon)')}"></div>
+                                <div class="barra-progresso" style="width: ${pctBarra}%; background: ${info.cor === 'critico' ? 'var(--cor-neon-critico)' : (info.cor === 'alerta' ? 'var(--cor-neon-alerta)' : 'var(--cor-neon)')}"></div>
                             </div>
                             <div class="hab-status status-${info.cor}">${info.status} ${info.nota > 0 ? '('+info.nota+(materia==='Redação'?' pts':'%')+')' : ''}</div>
                         </div>

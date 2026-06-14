@@ -302,7 +302,7 @@
             <h1 class="logo-militar">Estudo Intensivo</h1>
             <h2 class="logo-subtitulo">Resistência Intelectual</h2>
             <p class="frase-chamada">
-                Prepare-se para a batalha do conhecimento. Monitore suas missões diárias, conquiste patentes e submeta suas análises ao comando da Inteligência Artificial. Sua jornada estratégica começa aqui.
+                Prepare-se para a batalha do conhecimento. Monitore suas missions diárias, conquiste patentes e submeta suas análises ao comando da Inteligência Artificial. Sua jornada estratégica começa aqui.
             </p>
         </div>
 
@@ -352,7 +352,7 @@
     </div>
 
     <script>
-        async function ejecutarLogin(event) {
+        async function executarLogin(event) {
             event.preventDefault();
             
             const email = document.getElementById('email').value;
@@ -365,6 +365,7 @@
                 const resposta = await fetch('https://estudo-intensivo-backend.onrender.com/api/login', {
                     method: 'POST',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ email: email, senha: senha })
@@ -373,8 +374,16 @@
                 const dados = await resposta.json();
 
                 if (resposta.ok && dados.status === "sucesso") {
-                    localStorage.setItem('usuario_id', dados.usuario.id);
-                    localStorage.setItem('usuario_nome', dados.usuario.nome);
+                    // Puxa o ID real do objeto retornado pelo seu banco
+                    const idMapeado = dados.usuario?.id || dados.id || dados.usuario_id;
+                    const nomeMapeado = dados.usuario?.nome || dados.nome || dados.usuario_nome || 'Soldado';
+
+                    // Salva redundâncias para blindar as novas rotas das Ondas 1 e 2
+                    localStorage.setItem('usuario_id', idMapeado);
+                    localStorage.setItem('id', idMapeado);
+                    localStorage.setItem('user_id', idMapeado);
+                    localStorage.setItem('usuario_nome', nomeMapeado);
+                    
                     window.location.href = 'index.html';
                 } else {
                     erroBox.innerText = dados.mensagem || "Credenciais recusadas pelo Comando.";
@@ -388,16 +397,10 @@
         }
 
         function loginComGoogle() {
-    // 1. A URL de retorno oficial cadastrada no seu console do Google aponta para o BACK-END
-    const redirectUri = 'https://estudo-intensivo-backend.onrender.com/api/auth/callback';
-    
-    // 2. Dispara a requisição para o endpoint do Flask iniciar o aperto de mão com o Google
-    const backendUrl = `https://estudo-intensivo-backend.onrender.com/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
-    
-    // 3. Redireciona o soldado para a validação
-    window.location.href = backendUrl;
-}
-        
+            const redirectUri = 'https://estudo-intensivo-backend.onrender.com/api/auth/callback';
+            const backendUrl = `https://estudo-intensivo-backend.onrender.com/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+            window.location.href = backendUrl;
+        }
     </script>
 </body>
 </html>
